@@ -9,16 +9,25 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // This warning only ever appears in the browser's own developer console,
-  // never to a visitor, and only if the two settings above are missing.
+// True once both values above are actually set. main.jsx checks this
+// before rendering the app at all, and shows a plain-English error screen
+// instead when it's false — otherwise createClient() below throws on a
+// missing value, which (uncaught, before React has drawn anything) is
+// exactly what turns into a blank white page with no clue why.
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (!isSupabaseConfigured) {
   console.warn(
     'Supabase is not configured yet. Add VITE_SUPABASE_URL and ' +
-      'VITE_SUPABASE_ANON_KEY as environment variables.'
+      'VITE_SUPABASE_ANON_KEY as environment variables, then redeploy.'
   )
 }
 
 // Every other file in the app imports this one client, rather than each
 // creating its own, so they all share the same connection and the same
-// signed-in user.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// signed-in user. The placeholders keep createClient from throwing when
+// misconfigured — isSupabaseConfigured is what the app actually checks.
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key'
+)
