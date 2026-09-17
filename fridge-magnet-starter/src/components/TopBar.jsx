@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { colors } from '../theme'
 
@@ -8,7 +9,9 @@ export default function TopBar({ title }) {
     <header style={styles.header}>
       <div>
         <p style={styles.title}>{title}</p>
-        <p style={styles.subtitle}>{household?.name}</p>
+        <Link to="/household" style={styles.subtitle}>
+          {household?.name}
+        </Link>
       </div>
       <button style={styles.signOut} onClick={signOut}>
         Sign out
@@ -30,9 +33,12 @@ const styles = {
     fontWeight: 700,
   },
   subtitle: {
+    display: 'inline-block',
     margin: 0,
     color: colors.mutedText,
     fontSize: '0.85rem',
+    textDecoration: 'underline',
+    textDecorationColor: colors.border,
   },
   signOut: {
     padding: '0.4rem 0.6rem',

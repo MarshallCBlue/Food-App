@@ -9,8 +9,9 @@ usage.
 
 ## Status
 
-Steps 1–6 are done: accounts wired together, the database, the app shell
-with sign-in, the shopping list, the inventory, and the barcode scanner.
+Steps 1–7 are done: accounts wired together, the database, the app shell
+with sign-in, the shopping list, the inventory, the barcode scanner, and
+the NFC tag.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -33,9 +34,9 @@ renamed, reordered and deleted from the "Edit aisles" link. Everything
 updates live on every phone in the household via Supabase Realtime.
 
 The inventory groups items under Cupboard/Drawer/Fridge/Freezer the same
-way, with a small "add to inventory" form for putting things in directly
-(the automatic routes — barcode scan and the NFC tap — arrive in Steps 6
-and 7). Each row can have a specific amount taken off, or be cleared in
+way, with a small "add to inventory" form for putting things in directly,
+alongside the barcode scanner and the NFC tap as the two automatic
+routes in. Each row can have a specific amount taken off, or be cleared in
 one tap; running out offers a one-tap "add to shopping list" instead of
 just vanishing. Every change is logged to `stock_events`, and the
 arithmetic behind "take some off" runs inside Postgres itself rather than
@@ -54,8 +55,18 @@ the name yourself — either way it's saved against that barcode, so the
 lookup only ever happens once per product. From there it's one tap to add
 to the shopping list or straight into the inventory.
 
-The NFC sync screen is built in the step that follows — see the full
-build plan for the roadmap.
+Tapping your name in the header opens a Household screen with your join
+code and the ready-made address to write onto an NFC sticker (NTAG213 or
+better) with a free app like NFC Tools. Tapping that tag opens `/sync`,
+which shows exactly what's about to move — every checked item, asking
+only for a location on the few that don't already have one — and does
+nothing until you confirm. The whole move happens in one all-or-nothing
+database transaction, and an Undo button afterwards reverses it: items go
+back on the list, checked, and the same amount comes back out of wherever
+it landed (if that inventory's still there to take it from — it might not
+be, if some has already been used since).
+
+Step 8 (use-by dates) is next — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 

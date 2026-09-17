@@ -9,6 +9,8 @@ import AisleManagerScreen from './screens/AisleManagerScreen'
 import InventoryScreen from './screens/InventoryScreen'
 import LocationManagerScreen from './screens/LocationManagerScreen'
 import ScanScreen from './screens/ScanScreen'
+import SyncScreen from './screens/SyncScreen'
+import HouseholdInfoScreen from './screens/HouseholdInfoScreen'
 
 // The gate. Three questions, answered in order: is anyone signed in, do
 // they belong to a household, and only once both are yes does the real
@@ -40,6 +42,8 @@ export default function App() {
         <Route path="inventory" element={<InventoryScreen />} />
         <Route path="locations" element={<LocationManagerScreen />} />
         <Route path="scan" element={<ScanScreen />} />
+        <Route path="sync" element={<SyncScreen />} />
+        <Route path="household" element={<HouseholdInfoScreen />} />
       </Route>
     </Routes>
   )
