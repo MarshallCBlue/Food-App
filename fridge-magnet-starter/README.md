@@ -66,6 +66,15 @@ back on the list, checked, and the same amount comes back out of wherever
 it landed (if that inventory's still there to take it from — it might not
 be, if some has already been used since).
 
+The app is a proper installable PWA now, not just a browser bookmark: a
+web app manifest and a service worker (via `vite-plugin-pwa`) mean phones
+offer a real "install" rather than a plain shortcut, with its own icon,
+name and no browser address bar — the exact thing Step 9's iPhone
+notifications will depend on. The service worker only ever caches the
+app's own code, never anything from Supabase, so there's no risk of it
+serving stale shopping-list data — this app has no offline mode yet
+(that's still a possible later step), it's just properly installable.
+
 Step 8 (use-by dates) is next — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
