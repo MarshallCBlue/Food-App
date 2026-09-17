@@ -9,9 +9,9 @@ usage.
 
 ## Status
 
-Steps 1–8 are done: accounts wired together, the database, the app shell
+Steps 1–9 are done: accounts wired together, the database, the app shell
 with sign-in, the shopping list, the inventory, the barcode scanner, the
-NFC tag, and use-by dates.
+NFC tag, use-by dates, and reminders.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -85,7 +85,52 @@ days / This week, oldest first — colour marks the urgency, but every row
 also says it in words ("2 days left"), so it still reads if you're
 colour-blind or the phone's in bright sun.
 
-Step 9 (reminders) is next — see the full build plan for the roadmap.
+An install banner now appears across the top of the app until it's
+installed (or dismissed) — Android gets a real one-tap "Install app"
+button; iPhone gets the Share-button instructions Safari requires instead,
+since there's no way to trigger that dialog from a web page. The same
+instructions live permanently on the Household screen for anyone who
+dismissed the banner and changed their mind.
+
+Once installed, the Household screen's Reminders section turns on one
+notification a day, around 8am, if anything's expiring within three
+days — never one per item. A `send-expiry-reminders` Edge Function
+(`supabase/functions/`) does the actual sending over Web Push (the
+standard both Apple and Google support), triggered daily by a `pg_cron`
+job; the service worker's own `push` handler is what turns that into
+something visible on the phone even if the app isn't open. See **Finishing
+Step 9's setup** below — this is the one step with manual configuration
+this build plan can't do on its own behalf.
+
+Step 10 (polish) is next — see the full build plan for the roadmap.
+
+## Finishing Step 9's setup
+
+Reminders need two things set outside this repository, since they're
+secrets and this repository is public.
+
+**In Netlify** (Site settings → Environment variables), add:
+
+| Key | Value |
+|---|---|
+| `VITE_VAPID_PUBLIC_KEY` | `BEPVetMT6MEvEph3DGypVvQh8olKfhCzGjt6ra1U0OTO5a0UdvuO0HQGV3IVXg8Mjp_iykpOjEC50C1uN3XapsY` |
+
+Then **Deploys → Trigger deploy → Deploy site**, same as any other env
+var change.
+
+**In Supabase** (Project Settings → Edge Functions → Secrets), add:
+
+| Key | Value |
+|---|---|
+| `VAPID_PUBLIC_KEY` | `BEPVetMT6MEvEph3DGypVvQh8olKfhCzGjt6ra1U0OTO5a0UdvuO0HQGV3IVXg8Mjp_iykpOjEC50C1uN3XapsY` |
+| `VAPID_PRIVATE_KEY` | Run `select decrypted_secret from vault.decrypted_secrets where name = 'vapid_private_key_for_reference';` in the Supabase SQL editor and paste what comes back — never written here, since unlike the public key, this one is genuinely secret |
+| `VAPID_SUBJECT` | `mailto:you@example.com` (any contact address — required by the Web Push standard, shown to push services, never to the person receiving the notification) |
+| `CRON_SECRET` | Run `select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret_for_expiry_reminders';` in the Supabase SQL editor and paste what comes back |
+
+No redeploy needed for these — Edge Functions pick up new secrets on
+their next invocation. Once both are set, visit the Household screen on
+your phone (installed to the home screen first — that's the whole point
+of Step 9's first half) and tap "Turn on reminders".
 
 ## Running this on your own computer (optional)
 

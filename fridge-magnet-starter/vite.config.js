@@ -10,6 +10,18 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // injectManifest (not the default generateSW) because Step 9 needs a
+      // service worker that reacts to push events and notification
+      // clicks — src/sw.js is ours; this just injects the precache list
+      // into it at build time.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        // The two JS/CSS bundles change hash on every build; everything
+        // else here is small and static.
+        globPatterns: ['**/*.{js,css,html,png,ico}'],
+      },
       // Applies a new version automatically on the next load rather than
       // needing an "update available" prompt built into the app.
       registerType: 'autoUpdate',
@@ -28,14 +40,6 @@ export default defineConfig({
           { src: '/icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
           { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
-      },
-      workbox: {
-        // Every screen in this app reads live data from Supabase — there's
-        // no offline mode yet (that's a possible later step), so the
-        // service worker only ever precaches the app's own JS/CSS/HTML
-        // shell. It deliberately has no runtime-caching rules for Supabase
-        // requests, which would otherwise risk serving stale data.
-        cleanupOutdatedCaches: true,
       },
     }),
   ],

@@ -6,6 +6,9 @@ import { AuthProvider } from './state/AuthProvider.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ConfigError from './components/ConfigError.jsx'
 import { isSupabaseConfigured } from './supabaseClient.js'
+// Registers the beforeinstallprompt listener immediately — it fires once,
+// early, and only if nothing later happens to be listening yet.
+import './lib/installPrompt.js'
 
 // This is the very first code that runs. It finds the empty <div id="root">
 // in index.html and tells React to draw something inside it — either the

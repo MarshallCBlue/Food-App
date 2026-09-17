@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
+import InstallBanner from './InstallBanner'
 import { colors } from '../theme'
 
 // The shell every signed-in screen sits inside once a household exists:
@@ -9,6 +10,7 @@ export default function MainLayout() {
   return (
     <div style={styles.app}>
       <TopBar title="Fridge Magnet" />
+      <InstallBanner />
       <div style={styles.content}>
         <Outlet />
       </div>

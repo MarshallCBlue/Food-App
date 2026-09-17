@@ -1,14 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
+import { usePushSubscription } from '../state/usePushSubscription'
+import InstallCard from '../components/InstallCard'
 import { colors } from '../theme'
+
+const STATUS_COPY = {
+  checking: 'Checking…',
+  unsupported: "Reminders aren't supported in this browser.",
+  denied: "Notifications are blocked for this app. You'll need to allow them again in your phone's settings.",
+  error: "Something went wrong turning reminders on.",
+}
 
 // Where the household's join code and its NFC tag address live — the one
 // thing you need in hand before you can write the tag with NFC Tools.
 export default function HouseholdInfoScreen() {
-  const { household } = useAuth()
+  const { household, session } = useAuth()
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
+  const { status, error, subscribe, unsubscribe } = usePushSubscription(household.id, session.user.id)
 
   const syncUrl = `${window.location.origin}/sync?t=${household.secret_code}`
 
@@ -50,6 +60,33 @@ export default function HouseholdInfoScreen() {
         <button type="button" style={styles.copyButton} onClick={handleCopy}>
           {copied ? 'Copied!' : 'Copy address'}
         </button>
+      </section>
+
+      <section style={styles.card}>
+        <h3 style={styles.cardHeading}>Reminders</h3>
+        <p style={styles.body}>
+          One notification a day, around 8am, if anything's about to go off — never one per item.
+        </p>
+
+        {status === 'needs-install' && <InstallCard compact />}
+
+        {status === 'needs-permission' && (
+          <button type="button" style={styles.copyButton} onClick={subscribe}>
+            Turn on reminders
+          </button>
+        )}
+
+        {status === 'subscribed' && (
+          <>
+            <p style={styles.enabled}>✓ Reminders are on for this phone.</p>
+            <button type="button" style={styles.secondaryButton} onClick={unsubscribe}>
+              Turn off
+            </button>
+          </>
+        )}
+
+        {STATUS_COPY[status] && <p style={styles.body}>{STATUS_COPY[status]}</p>}
+        {error && <p style={styles.error}>{error}</p>}
       </section>
     </div>
   )
@@ -114,5 +151,23 @@ const styles = {
     color: colors.primaryText,
     fontWeight: 600,
     cursor: 'pointer',
+  },
+  secondaryButton: {
+    padding: '0.6rem 1rem',
+    borderRadius: '0.5rem',
+    border: `1px solid ${colors.border}`,
+    background: colors.card,
+    color: colors.mutedText,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  enabled: {
+    color: colors.primary,
+    fontWeight: 600,
+    margin: '0 0 0.6rem 0',
+  },
+  error: {
+    color: colors.danger,
+    fontSize: '0.9rem',
   },
 }
