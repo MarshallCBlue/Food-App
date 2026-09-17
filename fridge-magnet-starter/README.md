@@ -9,9 +9,9 @@ usage.
 
 ## Status
 
-Steps 1–9 are done: accounts wired together, the database, the app shell
-with sign-in, the shopping list, the inventory, the barcode scanner, the
-NFC tag, use-by dates, and reminders.
+Steps 1–9 are done, plus two pieces of Step 11 taken out of order (recipes
+and email invites) at the household's request — Step 10 (polish) is
+skipped for now.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -99,12 +99,51 @@ days — never one per item. A `send-expiry-reminders` Edge Function
 standard both Apple and Google support), triggered daily by a `pg_cron`
 job; the service worker's own `push` handler is what turns that into
 something visible on the phone even if the app isn't open. See **Finishing
-Step 9's setup** below — this is the one step with manual configuration
-this build plan can't do on its own behalf.
+this setup** below — manual configuration this build plan can't do on its
+own behalf.
 
-Step 10 (polish) is next — see the full build plan for the roadmap.
+A **Recipes** link (next to "Expiring" on the Inventory screen) manages a
+household's recipes — a name plus a list of ingredients, each tied to the
+same catalogue used everywhere else. "Cook this recipe" shows what it
+needs against what's actually in stock before touching anything, then
+consumes it: oldest use-by date first, across as many inventory batches
+as it takes, using whatever's there even if it's not quite enough — a
+recipe you're short one ingredient for still cooks, it just tells you
+what came up short afterwards, with a checkbox per item to add exactly
+the ones you choose to the shopping list, not an all-or-nothing dump.
 
-## Finishing Step 9's setup
+The Household screen can now also invite someone by email instead of
+reading a six-character code out loud — they get a link to set a password
+and land straight in the shared household, no code entry at all. See
+**Finishing this setup** below for the one small piece of configuration
+this needs.
+
+Step 10 (polish) and the rest of Step 11 (offline shopping list, a
+"you're due for milk" suggestion) remain undone — see the full build plan
+for the roadmap.
+
+## Finishing this setup
+
+### Email invites (new)
+
+**In Supabase** (Project Settings → Edge Functions → Secrets), add:
+
+| Key | Value |
+|---|---|
+| `APP_URL` | Your live site's address, e.g. `https://fridgemagnet.netlify.app` — this is where the invite email's link sends someone once they've set a password |
+
+That's the only new secret this needs — `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+and `SUPABASE_SERVICE_ROLE_KEY` are already provided to every Edge Function
+automatically.
+
+One honest limitation: Supabase's own built-in email sending (what
+`admin.inviteUserByEmail` uses) is rate-limited on the free tier — fine
+for a household inviting the odd person now and then, not for sending
+invites in bulk. If that ever becomes a problem, the fix is configuring a
+proper SMTP provider in Supabase's Auth settings, which is a dashboard
+change, not a code change.
+
+### Reminders (Step 9)
 
 Reminders need two things set outside this repository, since they're
 secrets and this repository is public.

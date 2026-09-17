@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { usePushSubscription } from '../state/usePushSubscription'
+import { supabase } from '../supabaseClient'
 import InstallCard from '../components/InstallCard'
 import { colors } from '../theme'
 
@@ -19,6 +20,9 @@ export default function HouseholdInfoScreen() {
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
   const { status, error, subscribe, unsubscribe } = usePushSubscription(household.id, session.user.id)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteStatus, setInviteStatus] = useState('idle')
+  const [inviteError, setInviteError] = useState(null)
 
   const syncUrl = `${window.location.origin}/sync?t=${household.secret_code}`
 
@@ -31,6 +35,24 @@ export default function HouseholdInfoScreen() {
       // Clipboard access can fail (older browsers, permissions) — the
       // address is already shown on screen either way, so this is
       // cosmetic only.
+    }
+  }
+
+  async function handleInvite(event) {
+    event.preventDefault()
+    setInviteError(null)
+    setInviteStatus('sending')
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('invite-household-member', {
+        body: { email: inviteEmail.trim(), householdId: household.id },
+      })
+      if (invokeError) throw invokeError
+      if (data?.error) throw new Error(data.error)
+      setInviteStatus('sent')
+      setInviteEmail('')
+    } catch (err) {
+      setInviteError(err.message)
+      setInviteStatus('idle')
     }
   }
 
@@ -47,6 +69,28 @@ export default function HouseholdInfoScreen() {
         <h3 style={styles.cardHeading}>Join code</h3>
         <p style={styles.body}>Share this with anyone else who should see the same list:</p>
         <p style={styles.code}>{household.secret_code}</p>
+      </section>
+
+      <section style={styles.card}>
+        <h3 style={styles.cardHeading}>Invite by email</h3>
+        <p style={styles.body}>
+          Sends a link to set a password and join — no code to read out loud.
+        </p>
+        <form onSubmit={handleInvite} style={styles.inviteForm}>
+          <input
+            style={styles.input}
+            type="email"
+            placeholder="Their email address"
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+            required
+          />
+          <button type="submit" style={styles.copyButton} disabled={inviteStatus === 'sending'}>
+            {inviteStatus === 'sending' ? 'Sending…' : 'Send invite'}
+          </button>
+        </form>
+        {inviteStatus === 'sent' && <p style={styles.enabled}>✓ Invite sent.</p>}
+        {inviteError && <p style={styles.error}>{inviteError}</p>}
       </section>
 
       <section style={styles.card}>
@@ -133,6 +177,17 @@ const styles = {
     letterSpacing: '0.2em',
     margin: 0,
     color: colors.primary,
+  },
+  inviteForm: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  input: {
+    flex: 1,
+    padding: '0.6rem',
+    borderRadius: '0.5rem',
+    border: `1px solid ${colors.border}`,
+    fontSize: '0.95rem',
   },
   url: {
     fontFamily: 'monospace',
