@@ -9,8 +9,8 @@ usage.
 
 ## Status
 
-Steps 1–3 are done: accounts wired together, the database, and the app
-shell with sign-in.
+Steps 1–4 are done: accounts wired together, the database, the app shell
+with sign-in, and the shopping list.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -21,13 +21,19 @@ seeds it with the standard aisles and storage locations automatically.
 
 Signing in works, first-time sign-up creates an account, and from there
 you either create a household (and get a six-character code to hand to
-whoever else should join) or join one with a code. Once you belong to a
-household you land on the three-tab shell — **List**, **Inventory**,
-**Scan** — though those tabs are still empty placeholders until the steps
-that fill them in.
+whoever else should join) or join one with a code.
 
-The shopping list, inventory, barcode scanner and NFC sync screens are
-built in the steps that follow — see the full build plan for the roadmap.
+The shopping list groups items under their aisle, A to Z, with ticked
+items greyed out and sunk to the bottom of their group. Typing an item's
+name suggests matches from your own catalogue — pick one and its aisle
+and usual unit come with it; type something new and you're asked which
+aisle it lives in, just that once. Tapping a row lets you change its
+quantity, unit or note, or remove it. Aisles themselves can be added,
+renamed, reordered and deleted from the "Edit aisles" link. Everything
+updates live on every phone in the household via Supabase Realtime.
+
+The inventory, barcode scanner and NFC sync screens are built in the
+steps that follow — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 

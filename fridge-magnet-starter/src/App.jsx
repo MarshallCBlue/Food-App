@@ -5,6 +5,7 @@ import SignIn from './screens/SignIn'
 import HouseholdSetup from './screens/HouseholdSetup'
 import MainLayout from './components/MainLayout'
 import ShoppingListScreen from './screens/ShoppingListScreen'
+import AisleManagerScreen from './screens/AisleManagerScreen'
 import InventoryScreen from './screens/InventoryScreen'
 import ScanScreen from './screens/ScanScreen'
 
@@ -34,6 +35,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<MainLayout />}>
         <Route index element={<ShoppingListScreen />} />
+        <Route path="aisles" element={<AisleManagerScreen />} />
         <Route path="inventory" element={<InventoryScreen />} />
         <Route path="scan" element={<ScanScreen />} />
       </Route>
