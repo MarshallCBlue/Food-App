@@ -87,6 +87,21 @@ words.
 - Motion is 150ms ease-out and nothing else, and it is switched off entirely for
   anyone who has asked their phone for reduced motion.
 
+## The icon
+
+The home screen icon is the same horseshoe magnet as the mark in the top bar,
+redrawn solid so it survives being shrunk to 32 pixels: a white body on the
+brand green, one pole capped in the signal red and the other in steel. It is
+the palette's own story in one picture, and it is the one place the red is
+used without anything being wrong.
+
+It is generated, not hand-drawn, by `scripts/make-icons.mjs` (`npm run icons`).
+That file converts the OKLCH values from `styles.css` to the sRGB that PNGs
+need, so the icon cannot drift away from the app's own colours. Three shapes
+come out of it: rounded squares that phones and browsers show as they are,
+full-bleed squares for Android to crop to whatever shape it likes, and a plain
+opaque square for iOS to round off itself.
+
 ## The four tabs
 
 List, Inventory, Recipes, Scan. Recipes was a text link at the top of the
