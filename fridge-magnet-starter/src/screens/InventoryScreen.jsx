@@ -40,6 +40,9 @@ export default function InventoryScreen() {
       <div style={styles.header}>
         <h2 style={styles.title}>Inventory</h2>
         <div style={styles.headerLinks}>
+          <Link to="/recipes" style={styles.locationsLink}>
+            Recipes
+          </Link>
           <Link to="/expiring" style={styles.locationsLink}>
             Expiring
           </Link>
