@@ -9,8 +9,8 @@ usage.
 
 ## Status
 
-Steps 1–5 are done: accounts wired together, the database, the app shell
-with sign-in, the shopping list, and the inventory.
+Steps 1–6 are done: accounts wired together, the database, the app shell
+with sign-in, the shopping list, the inventory, and the barcode scanner.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -43,8 +43,19 @@ in the browser, so repeated use can't drift a quantity away from its true
 value the way ordinary floating-point subtraction would. Locations can be
 added, renamed and deleted from the "Edit locations" link.
 
-The barcode scanner and NFC sync screens are built in the steps that
-follow — see the full build plan for the roadmap.
+The Scan tab opens the camera and reads a barcode automatically — Android
+Chrome's own built-in reader when it's available, a JavaScript decoder
+(ZXing) otherwise, since Safari has none built in. A manual "enter barcode
+instead" link covers cameras that won't cooperate. Once read, a barcode is
+looked up in this order: your own catalogue first (instant), then Open
+Food Facts (a free public product database) for its name and a best-guess
+aisle from its category tags, and only if both come up empty do you type
+the name yourself — either way it's saved against that barcode, so the
+lookup only ever happens once per product. From there it's one tap to add
+to the shopping list or straight into the inventory.
+
+The NFC sync screen is built in the step that follows — see the full
+build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 
