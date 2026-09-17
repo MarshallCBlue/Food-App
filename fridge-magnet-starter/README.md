@@ -9,10 +9,17 @@ usage.
 
 ## Status
 
-This is the starter scaffold from Step 1 of the build. It proves the app is
-live and connected to Supabase. The shopping list, inventory, barcode
-scanner and NFC sync screens are built in the steps that follow — see the
-full build plan for the roadmap.
+Step 1 (accounts wired together) and Step 2 (database) are done.
+
+The database lives in `supabase/migrations/`. It has all ten tables from
+the build plan — households, membership, categories, locations, the item
+catalogue, the shopping list, inventory, a stock-event log, push
+subscriptions and sync runs — every one of them locked with Row Level
+Security so a household only ever sees its own rows. Creating a household
+seeds it with the standard aisles and storage locations automatically.
+
+The shopping list, inventory, barcode scanner and NFC sync screens are
+built in the steps that follow — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 
