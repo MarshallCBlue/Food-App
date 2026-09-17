@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../state/AuthProvider'
 import { useLocations } from '../state/useLocations'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import SkeletonRows from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 // Where tapping the fridge's NFC tag lands. Shows what's about to move,
 // waits for confirmation, then does it all in one atomic database call —
@@ -12,6 +15,7 @@ export default function SyncScreen() {
   const [searchParams] = useSearchParams()
   const tagCode = searchParams.get('t')
   const { household } = useAuth()
+  const navigate = useNavigate()
   const { locations } = useLocations(household.id)
 
   const [rows, setRows] = useState(null)
@@ -89,43 +93,85 @@ export default function SyncScreen() {
     }
   }
 
+  // After the move: what went in, and a way to put it straight back.
   if (result) {
     return (
-      <div style={styles.wrap}>
-        <h2 style={styles.title}>{undone ? 'Undone' : `Moved ${result.moved.length} item(s) to the inventory`}</h2>
+      <div>
+        <PageHeader
+          title={undone ? 'Put back' : 'Moved in'}
+          subtitle={
+            undone
+              ? 'Everything is back on the shopping list.'
+              : `${result.moved.length} item${result.moved.length === 1 ? '' : 's'} went into the inventory.`
+          }
+        />
+
         {!undone && (
-          <ul style={styles.list}>
+          <section className="fm-group">
+            <div className="fm-rail">
+              <h2 className="fm-rail__name">Now in the inventory</h2>
+              <span className="fm-rail__count">{result.moved.length}</span>
+            </div>
             {result.moved.map((row) => (
-              <li key={row.item_id} style={styles.listItem}>
-                {row.name} — {row.quantity}
-                {row.unit ? ` ${row.unit}` : ''}
-              </li>
+              <div key={row.item_id} className="fm-row">
+                <div className="fm-row__main">
+                  <span className="fm-row__label" style={{ flex: 1 }}>
+                    <span className="fm-row__name">{row.name}</span>
+                  </span>
+                  <span className="fm-row__qty">
+                    {row.quantity}
+                    {row.unit ? ` ${row.unit}` : ''}
+                  </span>
+                </div>
+              </div>
             ))}
-          </ul>
+          </section>
         )}
-        {error && <p style={styles.error}>{error}</p>}
-        {!undone && (
-          <button type="button" style={styles.secondaryButton} onClick={handleUndo}>
-            Undo
+
+        {error && (
+          <p className="fm-error">
+            <Icon name="alert" />
+            {error}
+          </p>
+        )}
+
+        <div className="fm-stack" style={{ marginTop: '1rem' }}>
+          <button type="button" className="fm-btn fm-btn--block" onClick={() => navigate('/inventory')}>
+            See the inventory
           </button>
-        )}
+          {!undone && (
+            <button type="button" className="fm-btn fm-btn--secondary fm-btn--block" onClick={handleUndo}>
+              Undo this
+            </button>
+          )}
+        </div>
       </div>
     )
   }
 
   if (rows === null) {
     return (
-      <div style={styles.wrap}>
-        <p style={styles.muted}>Loading…</p>
+      <div>
+        <PageHeader title="Putting the shopping away" />
+        <SkeletonRows rows={4} />
       </div>
     )
   }
 
   if (rows.length === 0) {
     return (
-      <div style={styles.wrap}>
-        <h2 style={styles.title}>Nothing to move</h2>
-        <p style={styles.muted}>Tick things off your shopping list as you shop, then tap the tag.</p>
+      <div>
+        <PageHeader title="Nothing to move" />
+        <EmptyState
+          icon="basket"
+          title="Nothing is ticked off"
+          body="Tick things off the shopping list as they go in the trolley, then tap the fridge tag when you get home."
+          action={
+            <button type="button" className="fm-btn" style={{ marginTop: '0.5rem' }} onClick={() => navigate('/')}>
+              Open the shopping list
+            </button>
+          }
+        />
       </div>
     )
   }
@@ -134,113 +180,80 @@ export default function SyncScreen() {
   const canConfirm = missingLocation.every((row) => overrides[row.id])
 
   return (
-    <div style={styles.wrap}>
-      <h2 style={styles.title}>Move {rows.length} item(s) into the inventory?</h2>
+    <div>
+      <PageHeader
+        title="Putting the shopping away"
+        subtitle={`${rows.length} ticked item${rows.length === 1 ? '' : 's'} ready to move into the inventory`}
+      />
 
       {tagMismatch && (
-        <p style={styles.warning}>
-          This tag doesn't look like it belongs to {household.name} — it'll still only ever move
-          your own household's list, so this is safe to ignore if that's expected.
+        <p className="fm-note fm-panel" style={{ marginBottom: '1rem' }}>
+          This tag does not look like it belongs to {household.name}. It can only ever move your own
+          household's list, so it is safe to carry on if that is expected.
         </p>
       )}
 
-      <ul style={styles.list}>
+      <section className="fm-group">
+        <div className="fm-rail">
+          <h2 className="fm-rail__name">Moving in</h2>
+          <span className="fm-rail__count">{rows.length}</span>
+        </div>
+
         {rows.map((row) => (
-          <li key={row.id} style={styles.listItem}>
-            <span>
-              {row.item.name} — {row.quantity}
-              {row.unit ? ` ${row.unit}` : ''}
-            </span>
+          <div key={row.id} className="fm-row">
+            <div className="fm-row__main">
+              <span className="fm-row__label" style={{ flex: 1 }}>
+                <span className="fm-row__name">{row.item.name}</span>
+              </span>
+              <span className="fm-row__qty">
+                {row.quantity}
+                {row.unit ? ` ${row.unit}` : ''}
+              </span>
+            </div>
             {!row.item.default_location_id && (
-              <select
-                style={styles.select}
-                value={overrides[row.id] || ''}
-                onChange={(event) => setOverrides((current) => ({ ...current, [row.id]: event.target.value }))}
-              >
-                <option value="">Where does this live?</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
+              <div style={{ paddingBottom: '0.75rem' }}>
+                <select
+                  className="fm-field"
+                  value={overrides[row.id] || ''}
+                  onChange={(event) =>
+                    setOverrides((current) => ({ ...current, [row.id]: event.target.value }))
+                  }
+                  aria-label={`Where does ${row.item.name} live?`}
+                >
+                  <option value="">Where does this live?</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
-          </li>
+          </div>
         ))}
-      </ul>
+      </section>
 
-      {error && <p style={styles.error}>{error}</p>}
+      {error && (
+        <p className="fm-error">
+          <Icon name="alert" />
+          {error}
+        </p>
+      )}
 
-      <button type="button" style={styles.primaryButton} onClick={handleConfirm} disabled={!canConfirm || submitting}>
-        {submitting ? 'Moving…' : 'Confirm'}
+      <button
+        type="button"
+        className="fm-btn fm-btn--block"
+        style={{ marginTop: '1rem' }}
+        onClick={handleConfirm}
+        disabled={!canConfirm || submitting}
+      >
+        {submitting ? 'Moving' : `Move ${rows.length} item${rows.length === 1 ? '' : 's'} in`}
       </button>
+      {!canConfirm && (
+        <p className="fm-note" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+          Say where each new item lives first.
+        </p>
+      )}
     </div>
   )
-}
-
-const styles = {
-  wrap: {
-    paddingTop: '1rem',
-    maxWidth: '26rem',
-    margin: '0 auto',
-  },
-  title: {
-    margin: '0 0 0.75rem 0',
-    fontSize: '1.2rem',
-  },
-  muted: {
-    color: colors.mutedText,
-    textAlign: 'center',
-  },
-  warning: {
-    background: colors.card,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '0.5rem',
-    padding: '0.75rem',
-    fontSize: '0.85rem',
-    color: colors.mutedText,
-  },
-  list: {
-    listStyle: 'none',
-    margin: '0 0 1rem 0',
-    padding: 0,
-  },
-  listItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.6rem 0',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  select: {
-    padding: '0.4rem',
-    borderRadius: '0.4rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '0.85rem',
-  },
-  primaryButton: {
-    width: '100%',
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  secondaryButton: {
-    padding: '0.7rem 1rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.primary}`,
-    background: colors.card,
-    color: colors.primary,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-  },
 }

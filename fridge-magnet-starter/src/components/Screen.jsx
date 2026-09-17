@@ -1,24 +1,14 @@
-import { colors } from '../theme'
+import Icon from './Icon'
 
-// A centred, single-card page. Used by the screens that appear before
-// there is a household to belong to — signing in, and creating or joining
-// one.
-export default function Screen({ children }) {
-  return <main style={styles.page}>{children}</main>
-}
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.75rem',
-    padding: '1.5rem',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    textAlign: 'center',
-    color: colors.text,
-    background: colors.background,
-  },
+// A single centred column, used by the screens that come before there is
+// a household to belong to: signing in, and creating or joining one.
+export default function Screen({ title, subtitle, children, showMark = true }) {
+  return (
+    <main className="fm-centre">
+      {showMark && <Icon name="magnet" className="fm-centre__mark" />}
+      {title && <h1 className="fm-centre__title">{title}</h1>}
+      {subtitle && <p className="fm-centre__sub">{subtitle}</p>}
+      {children}
+    </main>
+  )
 }

@@ -2,6 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
+// The whole look of the app lives in this one stylesheet.
+import './styles.css'
 import { AuthProvider } from './state/AuthProvider.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ConfigError from './components/ConfigError.jsx'

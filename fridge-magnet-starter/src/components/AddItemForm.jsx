@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 // Typing "tahini" shows a suggestion if you've bought it before — pick it
 // and its aisle comes along for free. Type something new and you're asked
 // which aisle it lives in, just once, ever.
+//
+// Only the name box is shown until you start typing. The quantity, unit
+// and note appear underneath once there is something to attach them to,
+// so the top of the list isn't four empty boxes most of the time.
 export default function AddItemForm({ categories, searchItems, onAdd }) {
   const [name, setName] = useState('')
   const [suggestions, setSuggestions] = useState([])
@@ -15,6 +19,8 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
+
+  const expanded = name.trim().length > 0
 
   useEffect(() => {
     if (selectedItem) return
@@ -69,21 +75,22 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={styles.form}>
-      <div style={styles.nameField}>
+    <form onSubmit={handleSubmit} className={`fm-composer${expanded ? '' : ' fm-composer--tight'}`}>
+      <div className="fm-suggest-wrap">
         <input
-          style={styles.input}
-          placeholder="Add an item…"
+          className="fm-field"
+          placeholder="Add an item"
           value={name}
           onChange={(event) => handleNameChange(event.target.value)}
+          aria-label="Item name"
         />
         {suggestions.length > 0 && (
-          <ul style={styles.suggestions}>
+          <ul className="fm-suggest">
             {suggestions.map((item) => (
               <li key={item.id}>
-                <button type="button" style={styles.suggestionButton} onClick={() => pickSuggestion(item)}>
+                <button type="button" className="fm-suggest__item" onClick={() => pickSuggestion(item)}>
                   {item.name}
-                  {item.categories?.name && <span style={styles.suggestionMeta}> · {item.categories.name}</span>}
+                  {item.categories?.name && <span className="fm-suggest__meta"> · {item.categories.name}</span>}
                 </button>
               </li>
             ))}
@@ -91,119 +98,64 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
         )}
       </div>
 
-      {name.trim() && !selectedItem && (
-        <select style={styles.input} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-          <option value="">Which aisle?</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+      {expanded && (
+        <>
+          {!selectedItem && (
+            <select
+              className="fm-field"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+              aria-label="Aisle"
+            >
+              <option value="">Which aisle?</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="fm-inline">
+            <input
+              className="fm-field fm-field--qty"
+              type="number"
+              min="0"
+              step="any"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              aria-label="Quantity"
+            />
+            <input
+              className="fm-field"
+              placeholder="unit (optional)"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value)}
+              aria-label="Unit"
+            />
+          </div>
+
+          <input
+            className="fm-field"
+            placeholder="Note (optional)"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            aria-label="Note"
+          />
+
+          {error && (
+            <p className="fm-error">
+              <Icon name="alert" />
+              {error}
+            </p>
+          )}
+
+          <button className="fm-btn fm-btn--block" type="submit" disabled={submitting}>
+            <Icon name="plus" />
+            {submitting ? 'Adding' : 'Add to list'}
+          </button>
+        </>
       )}
-
-      <div style={styles.detailsRow}>
-        <input
-          style={{ ...styles.input, ...styles.quantityInput }}
-          type="number"
-          min="0"
-          step="any"
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-          aria-label="Quantity"
-        />
-        <input
-          style={{ ...styles.input, ...styles.unitInput }}
-          placeholder="unit (optional)"
-          value={unit}
-          onChange={(event) => setUnit(event.target.value)}
-        />
-      </div>
-
-      <input
-        style={styles.input}
-        placeholder="Note (optional)"
-        value={note}
-        onChange={(event) => setNote(event.target.value)}
-      />
-
-      {error && <p style={styles.error}>{error}</p>}
-
-      <button style={styles.addButton} type="submit" disabled={submitting || !name.trim()}>
-        {submitting ? 'Adding…' : 'Add to list'}
-      </button>
     </form>
   )
-}
-
-const styles = {
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    padding: '1rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    marginBottom: '1.25rem',
-  },
-  nameField: {
-    position: 'relative',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '0.7rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  suggestions: {
-    listStyle: 'none',
-    margin: '0.25rem 0 0 0',
-    padding: 0,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '0.5rem',
-    background: colors.card,
-    overflow: 'hidden',
-  },
-  suggestionButton: {
-    display: 'block',
-    width: '100%',
-    textAlign: 'left',
-    padding: '0.6rem 0.75rem',
-    border: 'none',
-    background: 'none',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-  },
-  suggestionMeta: {
-    color: colors.mutedText,
-    fontSize: '0.85rem',
-  },
-  detailsRow: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  quantityInput: {
-    flex: '0 0 5rem',
-  },
-  unitInput: {
-    flex: 1,
-  },
-  addButton: {
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    margin: 0,
-    fontSize: '0.9rem',
-  },
 }

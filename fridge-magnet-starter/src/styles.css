@@ -1,0 +1,1271 @@
+/*
+  Fridge Magnet — the whole look of the app, in one file.
+
+  Everything visual starts here: the colours, the text sizes, the spacing,
+  and a small set of reusable classes ("fm-" is short for Fridge Magnet)
+  that every screen uses. Screens no longer carry their own colours or
+  padding, so changing something here changes it everywhere at once.
+
+  The direction behind these choices is written down in DESIGN.md at the
+  top of the repository.
+*/
+
+/* Bundled with the app rather than fetched from Google, so the app still
+   looks right with no signal in the middle of a supermarket. */
+@import '@fontsource-variable/ibm-plex-sans/wght.css';
+
+/* ── Tokens ───────────────────────────────────────────────────────────
+   Named values used everywhere else. Change a colour here and the whole
+   app follows. Colours are written in OKLCH, a newer way of writing
+   colours where the first number is how light it is, so a set of shades
+   steps evenly instead of some looking heavier than others. */
+:root {
+  color-scheme: light;
+
+  /* Surfaces — the steel door and the paper list pinned to it */
+  --fm-paper: oklch(96.5% 0.005 235);
+  --fm-slip: oklch(100% 0 0);
+  --fm-sunk: oklch(93.5% 0.006 235);
+
+  /* Ink */
+  --fm-ink: oklch(22% 0.015 240);
+  --fm-muted: oklch(45% 0.012 240);
+  --fm-faint: oklch(62% 0.01 240);
+
+  /* Lines */
+  --fm-line: oklch(90% 0.005 240);
+  --fm-line-strong: oklch(82% 0.008 240);
+  --fm-rule: oklch(22% 0.015 240);
+
+  /* The app icon's green, kept for structure and anything positive */
+  --fm-brand: oklch(42% 0.075 162);
+  --fm-brand-pressed: oklch(36% 0.07 162);
+  --fm-brand-tint: oklch(94% 0.025 162);
+
+  /* The magnet's red cap: gone, overdue, delete */
+  --fm-signal: oklch(52% 0.18 27);
+  --fm-signal-tint: oklch(95% 0.03 27);
+
+  /* Use soon */
+  --fm-warn: oklch(47% 0.11 65);
+  --fm-warn-tint: oklch(95% 0.04 75);
+
+  /* Type */
+  --fm-font: 'IBM Plex Sans Variable', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --fm-text-xs: 0.75rem;
+  --fm-text-sm: 0.8125rem;
+  --fm-text-base: 0.9375rem;
+  --fm-text-md: 1.0625rem;
+  --fm-text-lg: 1.3125rem;
+  --fm-text-xl: 1.625rem;
+
+  /* Spacing, all multiples of 4px so vertical rhythm stays even */
+  --fm-gutter: 1rem;
+  --fm-space-1: 0.25rem;
+  --fm-space-2: 0.5rem;
+  --fm-space-3: 0.75rem;
+  --fm-space-4: 1rem;
+  --fm-space-5: 1.5rem;
+  --fm-space-6: 2rem;
+
+  --fm-radius: 0.625rem;
+  --fm-radius-lg: 0.875rem;
+  --fm-radius-pill: 999px;
+
+  /* Shadows are barely there: paper resting on steel, not floating */
+  --fm-shadow: 0 1px 2px oklch(22% 0.015 240 / 0.06),
+    0 1px 1px oklch(22% 0.015 240 / 0.04);
+  --fm-shadow-lifted: 0 8px 24px oklch(22% 0.015 240 / 0.14);
+
+  /* The bars top and bottom, including the space iPhones reserve for the
+     notch and the home indicator */
+  --fm-header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --fm-nav-h: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+
+  /* One ladder of stacking order, so nothing needs a made-up 9999 */
+  --fm-z-rail: 10;
+  --fm-z-bar: 20;
+  --fm-z-suggestions: 30;
+  --fm-z-toast: 40;
+  --fm-z-backdrop: 50;
+  --fm-z-dialog: 60;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fm-paper);
+  color: var(--fm-ink);
+  font-family: var(--fm-font);
+  font-size: var(--fm-text-base);
+  line-height: 1.45;
+  /* Numbers line up in a column instead of jittering as they change */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  /* Stops the whole page rubber-banding under the fixed bars on iOS */
+  overscroll-behavior-y: none;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--fm-brand);
+  text-decoration: none;
+}
+
+/* One visible focus ring for keyboard users, everywhere */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--fm-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--fm-brand-tint);
+}
+
+/* Anyone who has asked their phone to reduce motion gets none of it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── App shell ────────────────────────────────────────────────────── */
+.fm-app {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fm-paper);
+}
+
+.fm-main {
+  flex: 1;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: var(--fm-space-4) var(--fm-gutter);
+  /* Clears the bottom bar so the last row is never trapped underneath */
+  padding-bottom: calc(var(--fm-nav-h) + var(--fm-space-6));
+}
+
+/* Header: the household's name, and a way into settings */
+.fm-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--fm-z-bar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fm-space-3);
+  height: var(--fm-header-h);
+  padding: env(safe-area-inset-top, 0px) var(--fm-gutter) 0;
+  background: oklch(96.5% 0.005 235 / 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--fm-line);
+}
+
+.fm-header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--fm-space-2);
+  min-width: 0;
+}
+
+.fm-header__mark {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  color: var(--fm-brand);
+}
+
+.fm-header__name {
+  font-size: var(--fm-text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Bottom bar ───────────────────────────────────────────────────── */
+.fm-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--fm-z-bar);
+  display: flex;
+  height: var(--fm-nav-h);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: oklch(100% 0 0 / 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--fm-line);
+}
+
+.fm-nav__tab {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding-top: 2px;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: color 150ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fm-nav__tab svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* The same 2px rule that sits under a rail heading, so "you are here"
+   looks identical in the bar and in the list */
+.fm-nav__tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--fm-brand);
+  transform: translateX(-50%);
+  transition: width 150ms ease-out;
+}
+
+.fm-nav__tab.is-active {
+  color: var(--fm-brand);
+  font-weight: 600;
+}
+
+.fm-nav__tab.is-active::before {
+  width: 2.25rem;
+}
+
+.fm-nav__tab:active {
+  background: var(--fm-sunk);
+}
+
+/* ── Page headings ────────────────────────────────────────────────── */
+.fm-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--fm-space-3);
+  margin-bottom: var(--fm-space-4);
+}
+
+.fm-page-title {
+  font-size: var(--fm-text-xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.fm-page-sub {
+  margin-top: 2px;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+/* A back arrow on any screen pushed on top of a tab. An installed app has
+   no browser back button, so every such screen carries its own. */
+.fm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fm-space-1);
+  min-height: 44px;
+  margin-left: -0.35rem;
+  padding: 0 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fm-back:active {
+  color: var(--fm-ink);
+}
+
+/* Secondary destinations for a screen — small, out of the way */
+.fm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fm-space-2);
+}
+
+.fm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--fm-line-strong);
+  border-radius: var(--fm-radius-pill);
+  background: var(--fm-slip);
+  color: var(--fm-ink);
+  font-size: var(--fm-text-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fm-chip svg {
+  width: 15px;
+  height: 15px;
+  color: var(--fm-muted);
+}
+
+.fm-chip:active {
+  background: var(--fm-sunk);
+}
+
+.fm-chip--alert {
+  border-color: var(--fm-signal);
+  background: var(--fm-signal-tint);
+  color: var(--fm-signal);
+}
+
+.fm-chip--alert svg {
+  color: currentColor;
+}
+
+/* ── The rail: this app's signature ───────────────────────────────────
+   Every group of rows is introduced by one of these. It sticks to the
+   top while you scroll that group, so you always know which aisle or
+   which shelf you are looking at. */
+.fm-group {
+  margin-bottom: var(--fm-space-5);
+}
+
+.fm-rail {
+  position: sticky;
+  top: var(--fm-header-h);
+  z-index: var(--fm-z-rail);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--fm-space-3);
+  /* Runs to both screen edges, past the page's own padding */
+  margin: 0 calc(var(--fm-gutter) * -1);
+  padding: var(--fm-space-2) var(--fm-gutter) 0.35rem;
+  background: var(--fm-paper);
+  border-bottom: 2px solid var(--fm-rule);
+}
+
+.fm-rail__name {
+  font-size: var(--fm-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fm-rail__count {
+  color: var(--fm-muted);
+  font-size: var(--fm-text-xs);
+  font-weight: 500;
+}
+
+.fm-rail--signal {
+  border-bottom-color: var(--fm-signal);
+}
+
+.fm-rail--signal .fm-rail__name {
+  color: var(--fm-signal);
+}
+
+.fm-rail--warn {
+  border-bottom-color: var(--fm-warn);
+}
+
+.fm-rail--warn .fm-rail__name {
+  color: var(--fm-warn);
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────── */
+.fm-row {
+  margin: 0 calc(var(--fm-gutter) * -1);
+  padding: 0 var(--fm-gutter);
+  border-bottom: 1px solid var(--fm-line);
+}
+
+.fm-row:last-child {
+  border-bottom: 0;
+}
+
+.fm-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--fm-space-3);
+  min-height: 52px;
+}
+
+/* The whole row is the button, so it is impossible to miss with a thumb */
+.fm-row__button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fm-space-3);
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fm-row__button:active {
+  opacity: 0.55;
+}
+
+.fm-row__label {
+  min-width: 0;
+}
+
+.fm-row__name {
+  display: block;
+  font-size: var(--fm-text-base);
+  overflow-wrap: anywhere;
+}
+
+.fm-row__meta {
+  display: block;
+  margin-top: 1px;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-row__qty {
+  flex-shrink: 0;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.fm-row--done .fm-row__name {
+  color: var(--fm-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.fm-row--done .fm-row__qty {
+  color: var(--fm-faint);
+}
+
+.fm-row__note {
+  margin: 0 0 var(--fm-space-2) 2.15rem;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+/* The tick box. accent-color paints the native control in our green,
+   which keeps the platform's own behaviour and feel. */
+.fm-check {
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0;
+  accent-color: var(--fm-brand);
+}
+
+/* The panel that opens under a row when you tap it */
+.fm-row__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-2);
+  padding: 0 0 var(--fm-space-3);
+  animation: fm-open 150ms ease-out;
+}
+
+.fm-row__panel--indented {
+  margin-left: 2.15rem;
+}
+
+@keyframes fm-open {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────── */
+.fm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--fm-radius);
+  background: var(--fm-brand);
+  color: oklch(100% 0 0);
+  font-size: var(--fm-text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, opacity 150ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fm-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.fm-btn:active {
+  background: var(--fm-brand-pressed);
+}
+
+.fm-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.fm-btn--block {
+  width: 100%;
+}
+
+.fm-btn--secondary {
+  border-color: var(--fm-line-strong);
+  background: var(--fm-slip);
+  color: var(--fm-ink);
+}
+
+.fm-btn--secondary:active {
+  background: var(--fm-sunk);
+}
+
+.fm-btn--danger {
+  border-color: var(--fm-signal);
+  background: var(--fm-slip);
+  color: var(--fm-signal);
+}
+
+.fm-btn--danger:active {
+  background: var(--fm-signal-tint);
+}
+
+.fm-btn--solid-danger {
+  background: var(--fm-signal);
+  color: oklch(100% 0 0);
+}
+
+.fm-btn--quiet {
+  min-height: 40px;
+  border-color: transparent;
+  background: none;
+  color: var(--fm-muted);
+  font-weight: 500;
+}
+
+.fm-btn--quiet:active {
+  background: var(--fm-sunk);
+}
+
+.fm-btn--dashed {
+  border: 1px dashed var(--fm-line-strong);
+  background: none;
+  color: var(--fm-brand);
+}
+
+.fm-btn--sm {
+  min-height: 38px;
+  padding: 0 0.75rem;
+  font-size: var(--fm-text-sm);
+}
+
+/* Small square button holding a single icon */
+.fm-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: var(--fm-radius);
+  background: none;
+  color: var(--fm-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fm-icon-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.fm-icon-btn:active {
+  background: var(--fm-sunk);
+}
+
+.fm-icon-btn--bordered {
+  width: 40px;
+  height: 40px;
+  border-color: var(--fm-line-strong);
+  background: var(--fm-slip);
+}
+
+.fm-icon-btn--danger {
+  color: var(--fm-signal);
+}
+
+.fm-icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Panels and forms ─────────────────────────────────────────────── */
+.fm-panel {
+  padding: var(--fm-space-4);
+  border: 1px solid var(--fm-line);
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-slip);
+  box-shadow: var(--fm-shadow);
+}
+
+.fm-panel + .fm-panel {
+  margin-top: var(--fm-space-3);
+}
+
+.fm-panel__head svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--fm-muted);
+}
+
+.fm-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--fm-space-2);
+  margin-bottom: var(--fm-space-2);
+  font-size: var(--fm-text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.fm-panel__body {
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-panel__body + .fm-panel__body,
+.fm-panel__body + .fm-btn,
+.fm-panel__body + .fm-field,
+.fm-panel__body + form {
+  margin-top: var(--fm-space-3);
+}
+
+.fm-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-2);
+}
+
+.fm-stack--loose {
+  gap: var(--fm-space-3);
+}
+
+.fm-inline {
+  display: flex;
+  gap: var(--fm-space-2);
+}
+
+.fm-inline > .fm-field {
+  flex: 1;
+}
+
+.fm-inline > .fm-field--qty {
+  flex: 0 0 5.5rem;
+}
+
+.fm-field {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--fm-line-strong);
+  border-radius: var(--fm-radius);
+  background: var(--fm-slip);
+  /* 16px stops iOS zooming the page in when a field is tapped */
+  font-size: 1rem;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.fm-field::placeholder {
+  color: var(--fm-faint);
+}
+
+.fm-field:focus {
+  outline: none;
+  border-color: var(--fm-brand);
+  box-shadow: 0 0 0 3px var(--fm-brand-tint);
+}
+
+select.fm-field {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--fm-muted) 50%),
+    linear-gradient(135deg, var(--fm-muted) 50%, transparent 50%);
+  background-position: calc(100% - 1.05rem) 1.25rem, calc(100% - 0.75rem) 1.25rem;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.fm-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+  font-weight: 500;
+}
+
+/* The "add something" form that sits at the top of a list screen */
+.fm-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-2);
+  margin-bottom: var(--fm-space-5);
+  padding: var(--fm-space-3);
+  border: 1px solid var(--fm-line);
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-slip);
+  box-shadow: var(--fm-shadow);
+}
+
+.fm-composer--tight {
+  padding: 0.4rem;
+}
+
+/* Suggestions float above everything nearby rather than pushing it down */
+.fm-suggest-wrap {
+  position: relative;
+}
+
+.fm-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: var(--fm-z-suggestions);
+  overflow: hidden;
+  border: 1px solid var(--fm-line-strong);
+  border-radius: var(--fm-radius);
+  background: var(--fm-slip);
+  box-shadow: var(--fm-shadow-lifted);
+}
+
+.fm-suggest__item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--fm-line);
+  background: none;
+  text-align: left;
+  font-size: var(--fm-text-base);
+  cursor: pointer;
+}
+
+.fm-suggest__item:last-child {
+  border-bottom: 0;
+}
+
+.fm-suggest__item:active {
+  background: var(--fm-sunk);
+}
+
+.fm-suggest__meta {
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+/* ── Badges, notes and messages ───────────────────────────────────── */
+.fm-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: var(--fm-radius-pill);
+  font-size: var(--fm-text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fm-badge--overdue {
+  color: var(--fm-signal);
+  background: var(--fm-signal-tint);
+}
+
+.fm-badge--soon {
+  color: var(--fm-warn);
+  background: var(--fm-warn-tint);
+}
+
+.fm-badge--calm {
+  color: var(--fm-muted);
+  border-color: var(--fm-line-strong);
+}
+
+.fm-badge--ok {
+  color: var(--fm-brand);
+  background: var(--fm-brand-tint);
+}
+
+.fm-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fm-space-2);
+  padding: var(--fm-space-3);
+  border: 1px solid var(--fm-signal);
+  border-radius: var(--fm-radius);
+  background: var(--fm-signal-tint);
+  color: var(--fm-signal);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-error svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.fm-note {
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--fm-brand);
+  font-size: var(--fm-text-sm);
+  font-weight: 600;
+}
+
+.fm-ok svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* A code meant to be read out loud or typed in by someone else */
+.fm-code {
+  font-size: var(--fm-text-xl);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--fm-ink);
+}
+
+.fm-mono {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--fm-line);
+  border-radius: var(--fm-radius);
+  background: var(--fm-sunk);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: var(--fm-text-xs);
+  word-break: break-all;
+}
+
+/* ── Empty states ─────────────────────────────────────────────────── */
+.fm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fm-space-2);
+  padding: var(--fm-space-6) var(--fm-space-4);
+  text-align: center;
+}
+
+.fm-empty svg {
+  width: 30px;
+  height: 30px;
+  color: var(--fm-faint);
+}
+
+.fm-empty__title {
+  font-size: var(--fm-text-md);
+  font-weight: 600;
+}
+
+.fm-empty__body {
+  max-width: 24rem;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+/* ── Loading ──────────────────────────────────────────────────────────
+   Grey bars in the shape of the rows that are coming, rather than the
+   word "Loading". The screen does not jump when the real data lands. */
+.fm-skeleton {
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--fm-sunk) 25%,
+    oklch(96% 0.004 240) 50%,
+    var(--fm-sunk) 75%
+  );
+  background-size: 200% 100%;
+  animation: fm-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes fm-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.fm-skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fm-space-3);
+  min-height: 52px;
+  border-bottom: 1px solid var(--fm-line);
+}
+
+/* ── Dialog ───────────────────────────────────────────────────────────
+   Used instead of the browser's own alert box, which cannot be styled
+   and looks like the page has been hijacked. */
+.fm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fm-z-backdrop);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--fm-gutter);
+  padding-bottom: calc(var(--fm-gutter) + env(safe-area-inset-bottom, 0px));
+  background: oklch(22% 0.015 240 / 0.45);
+  animation: fm-fade 150ms ease-out;
+}
+
+.fm-dialog {
+  z-index: var(--fm-z-dialog);
+  width: 100%;
+  max-width: 24rem;
+  padding: var(--fm-space-4);
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-slip);
+  box-shadow: var(--fm-shadow-lifted);
+  animation: fm-rise 150ms ease-out;
+}
+
+.fm-dialog__title {
+  font-size: var(--fm-text-md);
+  font-weight: 600;
+}
+
+.fm-dialog__body {
+  margin-top: var(--fm-space-1);
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-dialog__actions {
+  display: flex;
+  gap: var(--fm-space-2);
+  margin-top: var(--fm-space-4);
+}
+
+.fm-dialog__actions > * {
+  flex: 1;
+}
+
+@keyframes fm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────
+   Sits above the bottom bar, for "that happened, and here is how to undo
+   it" messages. */
+.fm-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--fm-nav-h) + var(--fm-space-2));
+  z-index: var(--fm-z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--fm-space-3);
+  width: calc(100% - var(--fm-gutter) * 2);
+  max-width: 30rem;
+  padding: 0.7rem 0.75rem 0.7rem 1rem;
+  border-radius: var(--fm-radius);
+  background: var(--fm-ink);
+  color: oklch(98% 0 0);
+  font-size: var(--fm-text-sm);
+  box-shadow: var(--fm-shadow-lifted);
+  transform: translateX(-50%);
+  animation: fm-rise 150ms ease-out;
+}
+
+.fm-toast__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm-toast__action {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid oklch(100% 0 0 / 0.25);
+  border-radius: var(--fm-radius-pill);
+  background: none;
+  color: oklch(98% 0 0);
+  font-size: var(--fm-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fm-toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--fm-radius-pill);
+  background: none;
+  color: oklch(100% 0 0 / 0.7);
+  cursor: pointer;
+}
+
+.fm-toast__close svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Centred screens (sign in, setting up, error pages) ───────────── */
+.fm-centre {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fm-space-4);
+  padding: var(--fm-space-5) var(--fm-gutter);
+  padding-top: calc(var(--fm-space-5) + env(safe-area-inset-top, 0px));
+}
+
+.fm-centre__mark {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: var(--fm-brand);
+}
+
+.fm-centre__title {
+  font-size: var(--fm-text-lg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.fm-centre__sub {
+  max-width: 26rem;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+  text-align: center;
+}
+
+.fm-centre__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-3);
+  width: 100%;
+  max-width: 21rem;
+  padding: var(--fm-space-5);
+  border: 1px solid var(--fm-line);
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-slip);
+  box-shadow: var(--fm-shadow);
+}
+
+/* Two choices of equal weight, one tap each */
+.fm-segment {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--fm-radius);
+  background: var(--fm-sunk);
+}
+
+.fm-segment__option {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: calc(var(--fm-radius) - 3px);
+  background: none;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fm-segment__option.is-active {
+  background: var(--fm-slip);
+  color: var(--fm-ink);
+  box-shadow: var(--fm-shadow);
+}
+
+/* ── Camera ───────────────────────────────────────────────────────── */
+.fm-camera {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: 56svh;
+  overflow: hidden;
+  border-radius: var(--fm-radius-lg);
+  background: oklch(20% 0 0);
+}
+
+.fm-camera video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The bracket the barcode goes inside */
+.fm-camera__target {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 72%;
+  height: 34%;
+  border: 2px solid oklch(100% 0 0 / 0.9);
+  border-radius: var(--fm-radius);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 100vmax oklch(20% 0 0 / 0.35);
+}
+
+.fm-camera__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--fm-space-4);
+  color: oklch(100% 0 0 / 0.9);
+  font-size: var(--fm-text-sm);
+  text-align: center;
+}
+
+/* ── Install nudge ────────────────────────────────────────────────── */
+.fm-install {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--fm-space-3);
+  margin: 0 0 var(--fm-space-4);
+  padding: var(--fm-space-3);
+  border: 1px solid var(--fm-line);
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-brand-tint);
+}
+
+.fm-install__icon {
+  flex-shrink: 0;
+  color: var(--fm-brand);
+}
+
+.fm-install__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.fm-install__text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fm-text-sm);
+}
+
+.fm-install__title {
+  font-weight: 600;
+  color: var(--fm-ink);
+}
+
+.fm-install__body {
+  margin-top: 2px;
+  color: var(--fm-muted);
+}
+
+.fm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

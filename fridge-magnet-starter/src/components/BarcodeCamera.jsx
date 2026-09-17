@@ -1,70 +1,35 @@
 import { useBarcodeScanner } from '../state/useBarcodeScanner'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 export default function BarcodeCamera({ active, onDetect, onManualEntry }) {
   const { videoRef, error, ready } = useBarcodeScanner({ active, onDetect })
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.frame}>
-        <video ref={videoRef} style={styles.video} muted playsInline />
-        {!ready && !error && <p style={styles.overlayText}>Starting camera…</p>}
+    <div className="fm-stack fm-stack--loose">
+      <div className="fm-camera">
+        <video ref={videoRef} muted playsInline />
+        {/* The bracket gives the barcode somewhere to go, so people are
+            not guessing where the camera is actually looking. */}
+        {ready && !error && (
+          <>
+            <div className="fm-camera__target" />
+            <p className="fm-camera__hint">Line the barcode up inside the box</p>
+          </>
+        )}
+        {!ready && !error && <p className="fm-camera__hint">Starting the camera</p>}
       </div>
 
       {error && (
-        <p style={styles.error}>
-          Couldn't open the camera ({error}). You can still type the barcode below.
+        <p className="fm-error">
+          <Icon name="alert" />
+          The camera would not open ({error}). You can type the number underneath instead.
         </p>
       )}
 
-      <button type="button" style={styles.manualButton} onClick={onManualEntry}>
-        Enter barcode instead
+      <button type="button" className="fm-btn fm-btn--quiet fm-btn--block" onClick={onManualEntry}>
+        <Icon name="keyboard" />
+        Type the number instead
       </button>
     </div>
   )
-}
-
-const styles = {
-  wrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    alignItems: 'center',
-  },
-  frame: {
-    position: 'relative',
-    width: '100%',
-    maxWidth: '24rem',
-    aspectRatio: '4 / 3',
-    borderRadius: '0.75rem',
-    overflow: 'hidden',
-    background: '#000',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  overlayText: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#fff',
-    margin: 0,
-  },
-  error: {
-    color: colors.danger,
-    textAlign: 'center',
-    fontSize: '0.9rem',
-    maxWidth: '22rem',
-  },
-  manualButton: {
-    border: 'none',
-    background: 'none',
-    color: colors.primary,
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-  },
 }

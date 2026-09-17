@@ -4,7 +4,9 @@ import { useAuth } from '../state/AuthProvider'
 import { useRecipes } from '../state/useRecipes'
 import { supabase } from '../supabaseClient'
 import { addItemToShoppingList } from '../state/useInventory'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import SkeletonRows from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 // Shows what a recipe needs against what's actually in the inventory
 // before touching anything, cooks it (Postgres does the real
@@ -90,55 +92,108 @@ export default function CookRecipeScreen() {
     }
   }
 
-  if (loadError) return <p style={styles.error}>{loadError}</p>
-  if (!recipe) return <p style={styles.muted}>Loading…</p>
+  if (loadError) {
+    return (
+      <div>
+        <PageHeader backTo="/recipes" title="Recipe" />
+        <p className="fm-error">
+          <Icon name="alert" />
+          {loadError}
+        </p>
+      </div>
+    )
+  }
 
+  if (!recipe) {
+    return (
+      <div>
+        <PageHeader backTo="/recipes" title="Recipe" />
+        <SkeletonRows rows={4} />
+      </div>
+    )
+  }
+
+  // After cooking: what came out of the cupboards, and what you were
+  // short of.
   if (result) {
     return (
-      <div style={styles.wrap}>
-        <h2 style={styles.title}>Cooked {recipe.name}</h2>
+      <div>
+        <PageHeader
+          backTo="/recipes"
+          title={`Cooked ${recipe.name}`}
+          subtitle="Your inventory has been updated"
+        />
 
         {result.consumed.length > 0 && (
-          <section style={styles.section}>
-            <h3 style={styles.sectionHeading}>Used from your inventory</h3>
-            <ul style={styles.list}>
-              {result.consumed.map((item) => (
-                <li key={item.item_id} style={styles.listItem}>
-                  {item.name} — {item.quantity}
-                  {item.unit ? ` ${item.unit}` : ''}
-                </li>
-              ))}
-            </ul>
+          <section className="fm-group">
+            <div className="fm-rail">
+              <h2 className="fm-rail__name">Taken out</h2>
+              <span className="fm-rail__count">{result.consumed.length}</span>
+            </div>
+            {result.consumed.map((item) => (
+              <div key={item.item_id} className="fm-row">
+                <div className="fm-row__main">
+                  <span className="fm-row__label" style={{ flex: 1 }}>
+                    <span className="fm-row__name">{item.name}</span>
+                  </span>
+                  <span className="fm-row__qty">
+                    {item.quantity}
+                    {item.unit ? ` ${item.unit}` : ''}
+                  </span>
+                </div>
+              </div>
+            ))}
           </section>
         )}
 
         {result.short.length > 0 ? (
-          <section style={styles.section}>
-            <h3 style={styles.sectionHeading}>Missing — add to shopping list?</h3>
-            <ul style={styles.list}>
-              {result.short.map((item) => (
-                <li key={item.item_id} style={styles.checkRow}>
-                  <label style={styles.checkLabel}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedShort[item.item_id])}
-                      onChange={(event) =>
-                        setSelectedShort((current) => ({ ...current, [item.item_id]: event.target.checked }))
-                      }
-                    />
-                    {item.name} — short {item.quantity}
+          <section className="fm-group">
+            <div className="fm-rail fm-rail--warn">
+              <h2 className="fm-rail__name">You were short of</h2>
+              <span className="fm-rail__count">{result.short.length}</span>
+            </div>
+
+            {result.short.map((item) => (
+              <div key={item.item_id} className="fm-row">
+                <label className="fm-row__main" style={{ cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    className="fm-check"
+                    checked={Boolean(selectedShort[item.item_id])}
+                    onChange={(event) =>
+                      setSelectedShort((current) => ({ ...current, [item.item_id]: event.target.checked }))
+                    }
+                  />
+                  <span className="fm-row__label" style={{ flex: 1 }}>
+                    <span className="fm-row__name">{item.name}</span>
+                  </span>
+                  <span className="fm-row__qty">
+                    short {item.quantity}
                     {item.unit ? ` ${item.unit}` : ''}
-                  </label>
-                </li>
-              ))}
-            </ul>
-            {actionError && <p style={styles.error}>{actionError}</p>}
-            <button type="button" style={styles.primaryButton} onClick={handleAddSelectedToList} disabled={addingToList}>
-              {addingToList ? 'Adding…' : 'Add selected to shopping list'}
+                  </span>
+                </label>
+              </div>
+            ))}
+
+            {actionError && (
+              <p className="fm-error" style={{ marginTop: '1rem' }}>
+                <Icon name="alert" />
+                {actionError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              className="fm-btn fm-btn--block"
+              style={{ marginTop: '1rem' }}
+              onClick={handleAddSelectedToList}
+              disabled={addingToList}
+            >
+              {addingToList ? 'Adding' : 'Add ticked to shopping list'}
             </button>
           </section>
         ) : (
-          <button type="button" style={styles.primaryButton} onClick={() => navigate('/inventory')}>
+          <button type="button" className="fm-btn fm-btn--block" onClick={() => navigate('/inventory')}>
             Done
           </button>
         )}
@@ -146,106 +201,71 @@ export default function CookRecipeScreen() {
     )
   }
 
+  // Before cooking: needed against what is actually in the cupboards.
+  const shortCount = recipe.recipe_ingredients.filter(
+    (ri) => (availability[ri.item.id] || 0) < ri.quantity
+  ).length
+
   return (
-    <div style={styles.wrap}>
-      <h2 style={styles.title}>{recipe.name}</h2>
-      <ul style={styles.list}>
+    <div>
+      <PageHeader
+        backTo="/recipes"
+        title={recipe.name}
+        subtitle={
+          shortCount === 0
+            ? 'You have everything this needs'
+            : `Short of ${shortCount} ingredient${shortCount === 1 ? '' : 's'}`
+        }
+      />
+
+      <section className="fm-group">
+        <div className="fm-rail">
+          <h2 className="fm-rail__name">Needs</h2>
+          <span className="fm-rail__count">{recipe.recipe_ingredients.length}</span>
+        </div>
+
         {recipe.recipe_ingredients.map((ri) => {
           const have = availability[ri.item.id] || 0
           const short = have < ri.quantity
           return (
-            <li key={ri.id} style={styles.listItem}>
-              <span>
-                {ri.item.name} — need {ri.quantity}
-                {ri.unit ? ` ${ri.unit}` : ''}
-              </span>
-              <span style={short ? styles.shortBadge : styles.okBadge}>
-                {have}
-                {ri.unit ? ` ${ri.unit}` : ''} in stock
-              </span>
-            </li>
+            <div key={ri.id} className="fm-row">
+              <div className="fm-row__main">
+                <span className="fm-row__label" style={{ flex: 1 }}>
+                  <span className="fm-row__name">{ri.item.name}</span>
+                  <span className="fm-row__meta">
+                    needs {ri.quantity}
+                    {ri.unit ? ` ${ri.unit}` : ''}
+                  </span>
+                </span>
+                <span className={`fm-badge fm-badge--${short ? 'soon' : 'ok'}`}>
+                  {short ? `${have}${ri.unit ? ` ${ri.unit}` : ''} in stock` : 'in stock'}
+                </span>
+              </div>
+            </div>
           )
         })}
-      </ul>
+      </section>
 
-      {actionError && <p style={styles.error}>{actionError}</p>}
+      {actionError && (
+        <p className="fm-error">
+          <Icon name="alert" />
+          {actionError}
+        </p>
+      )}
 
-      <button type="button" style={styles.primaryButton} onClick={handleCook} disabled={cooking}>
-        {cooking ? 'Cooking…' : 'Cook this recipe'}
+      <button
+        type="button"
+        className="fm-btn fm-btn--block"
+        style={{ marginTop: '1rem' }}
+        onClick={handleCook}
+        disabled={cooking}
+      >
+        <Icon name="recipes" />
+        {cooking ? 'Cooking' : 'Cook this'}
       </button>
+      <p className="fm-note" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+        Takes these ingredients out of your inventory.
+      </p>
     </div>
   )
-}
-
-const styles = {
-  wrap: {
-    paddingTop: '1rem',
-    maxWidth: '26rem',
-    margin: '0 auto',
-  },
-  title: {
-    margin: '0 0 0.75rem 0',
-    fontSize: '1.2rem',
-  },
-  muted: {
-    color: colors.mutedText,
-    textAlign: 'center',
-    marginTop: '2rem',
-  },
-  section: {
-    marginBottom: '1.25rem',
-  },
-  sectionHeading: {
-    margin: '0 0 0.5rem 0',
-    fontSize: '0.95rem',
-  },
-  list: {
-    listStyle: 'none',
-    margin: '0 0 1rem 0',
-    padding: 0,
-  },
-  listItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.6rem 0',
-    borderBottom: `1px solid ${colors.border}`,
-    fontSize: '0.95rem',
-  },
-  checkRow: {
-    padding: '0.5rem 0',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  checkLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.6rem',
-    fontSize: '0.95rem',
-  },
-  shortBadge: {
-    color: colors.warning,
-    fontSize: '0.85rem',
-    whiteSpace: 'nowrap',
-  },
-  okBadge: {
-    color: colors.mutedText,
-    fontSize: '0.85rem',
-    whiteSpace: 'nowrap',
-  },
-  primaryButton: {
-    width: '100%',
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-  },
 }

@@ -1,23 +1,22 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { usePushSubscription } from '../state/usePushSubscription'
 import { supabase } from '../supabaseClient'
 import InstallCard from '../components/InstallCard'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import Icon from '../components/Icon'
 
 const STATUS_COPY = {
-  checking: 'Checking…',
-  unsupported: "Reminders aren't supported in this browser.",
+  checking: 'Checking',
+  unsupported: 'Reminders are not supported in this browser.',
   denied: "Notifications are blocked for this app. You'll need to allow them again in your phone's settings.",
-  error: "Something went wrong turning reminders on.",
+  error: 'Something went wrong turning reminders on.',
 }
 
-// Where the household's join code and its NFC tag address live — the one
-// thing you need in hand before you can write the tag with NFC Tools.
+// The household's join code, its NFC tag address, reminders, and the way
+// out. Reached from the cog in the top bar.
 export default function HouseholdInfoScreen() {
-  const { household, session } = useAuth()
-  const navigate = useNavigate()
+  const { household, session, signOut } = useAuth()
   const [copied, setCopied] = useState(false)
   const { status, error, subscribe, unsubscribe } = usePushSubscription(household.id, session.user.id)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -57,172 +56,118 @@ export default function HouseholdInfoScreen() {
   }
 
   return (
-    <div style={{ paddingTop: '1rem' }}>
-      <div style={styles.header}>
-        <button type="button" style={styles.backButton} onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h2 style={styles.title}>{household.name}</h2>
-      </div>
+    <div>
+      <PageHeader backTo={-1} title={household.name} subtitle="Household, tag and reminders" />
 
-      <section style={styles.card}>
-        <h3 style={styles.cardHeading}>Join code</h3>
-        <p style={styles.body}>Share this with anyone else who should see the same list:</p>
-        <p style={styles.code}>{household.secret_code}</p>
+      <section className="fm-panel">
+        <h2 className="fm-panel__head">
+          <Icon name="home" />
+          Join code
+        </h2>
+        <p className="fm-panel__body">Share this with anyone else who should see the same list.</p>
+        <p className="fm-code" style={{ marginTop: '0.75rem' }}>
+          {household.secret_code}
+        </p>
       </section>
 
-      <section style={styles.card}>
-        <h3 style={styles.cardHeading}>Invite by email</h3>
-        <p style={styles.body}>
-          Sends a link to set a password and join — no code to read out loud.
-        </p>
-        <form onSubmit={handleInvite} style={styles.inviteForm}>
+      <section className="fm-panel">
+        <h2 className="fm-panel__head">
+          <Icon name="share" />
+          Invite by email
+        </h2>
+        <p className="fm-panel__body">Sends a link to set a password and join, with no code to read out.</p>
+        <form onSubmit={handleInvite} className="fm-inline" style={{ marginTop: '0.75rem' }}>
           <input
-            style={styles.input}
+            className="fm-field"
             type="email"
             placeholder="Their email address"
             value={inviteEmail}
             onChange={(event) => setInviteEmail(event.target.value)}
+            aria-label="Email address to invite"
             required
           />
-          <button type="submit" style={styles.copyButton} disabled={inviteStatus === 'sending'}>
-            {inviteStatus === 'sending' ? 'Sending…' : 'Send invite'}
+          <button type="submit" className="fm-btn" disabled={inviteStatus === 'sending'}>
+            {inviteStatus === 'sending' ? 'Sending' : 'Send'}
           </button>
         </form>
-        {inviteStatus === 'sent' && <p style={styles.enabled}>✓ Invite sent.</p>}
-        {inviteError && <p style={styles.error}>{inviteError}</p>}
+        {inviteStatus === 'sent' && (
+          <p className="fm-ok" style={{ marginTop: '0.75rem' }}>
+            <Icon name="check" />
+            Invite sent
+          </p>
+        )}
+        {inviteError && (
+          <p className="fm-error" style={{ marginTop: '0.75rem' }}>
+            <Icon name="alert" />
+            {inviteError}
+          </p>
+        )}
       </section>
 
-      <section style={styles.card}>
-        <h3 style={styles.cardHeading}>Your fridge tag</h3>
-        <p style={styles.body}>
-          Write this address to an NFC sticker (NTAG213 or better) with a free app like NFC
-          Tools, then stick it to the fridge. Tapping it will move everything you've ticked off
-          into the right cupboards.
+      <section className="fm-panel">
+        <h2 className="fm-panel__head">
+          <Icon name="magnet" />
+          Your fridge tag
+        </h2>
+        <p className="fm-panel__body">
+          Write this address to an NFC sticker (NTAG213 or better) with a free app like NFC Tools, then
+          stick it to the fridge. Tapping it moves everything you have ticked off into the right places.
         </p>
-        <p style={styles.url}>{syncUrl}</p>
-        <button type="button" style={styles.copyButton} onClick={handleCopy}>
-          {copied ? 'Copied!' : 'Copy address'}
+        <p className="fm-mono" style={{ marginTop: '0.75rem' }}>
+          {syncUrl}
+        </p>
+        <button type="button" className="fm-btn fm-btn--secondary" style={{ marginTop: '0.75rem' }} onClick={handleCopy}>
+          <Icon name={copied ? 'check' : 'copy'} />
+          {copied ? 'Copied' : 'Copy address'}
         </button>
       </section>
 
-      <section style={styles.card}>
-        <h3 style={styles.cardHeading}>Reminders</h3>
-        <p style={styles.body}>
-          One notification a day, around 8am, if anything's about to go off — never one per item.
+      <section className="fm-panel">
+        <h2 className="fm-panel__head">
+          <Icon name="bell" />
+          Reminders
+        </h2>
+        <p className="fm-panel__body">
+          One notification a day, around 8am, if anything is about to go off. Never one per item.
         </p>
 
-        {status === 'needs-install' && <InstallCard compact />}
+        {status === 'needs-install' && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <InstallCard compact />
+          </div>
+        )}
 
         {status === 'needs-permission' && (
-          <button type="button" style={styles.copyButton} onClick={subscribe}>
+          <button type="button" className="fm-btn" style={{ marginTop: '0.75rem' }} onClick={subscribe}>
             Turn on reminders
           </button>
         )}
 
         {status === 'subscribed' && (
           <>
-            <p style={styles.enabled}>✓ Reminders are on for this phone.</p>
-            <button type="button" style={styles.secondaryButton} onClick={unsubscribe}>
+            <p className="fm-ok" style={{ marginTop: '0.75rem' }}>
+              <Icon name="check" />
+              Reminders are on for this phone
+            </p>
+            <button type="button" className="fm-btn fm-btn--secondary" style={{ marginTop: '0.75rem' }} onClick={unsubscribe}>
               Turn off
             </button>
           </>
         )}
 
-        {STATUS_COPY[status] && <p style={styles.body}>{STATUS_COPY[status]}</p>}
-        {error && <p style={styles.error}>{error}</p>}
+        {STATUS_COPY[status] && <p className="fm-panel__body">{STATUS_COPY[status]}</p>}
+        {error && (
+          <p className="fm-error" style={{ marginTop: '0.75rem' }}>
+            <Icon name="alert" />
+            {error}
+          </p>
+        )}
       </section>
+
+      <button type="button" className="fm-btn fm-btn--quiet fm-btn--block" style={{ marginTop: '1rem' }} onClick={signOut}>
+        <Icon name="signOut" />
+        Sign out
+      </button>
     </div>
   )
-}
-
-const styles = {
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    marginBottom: '1rem',
-  },
-  backButton: {
-    border: 'none',
-    background: 'none',
-    color: colors.primary,
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-    padding: 0,
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.2rem',
-  },
-  card: {
-    padding: '1rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    marginBottom: '1rem',
-  },
-  cardHeading: {
-    margin: '0 0 0.5rem 0',
-    fontSize: '1rem',
-  },
-  body: {
-    color: colors.mutedText,
-    margin: '0 0 0.5rem 0',
-    fontSize: '0.9rem',
-  },
-  code: {
-    fontSize: '1.8rem',
-    fontWeight: 700,
-    letterSpacing: '0.2em',
-    margin: 0,
-    color: colors.primary,
-  },
-  inviteForm: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  input: {
-    flex: 1,
-    padding: '0.6rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '0.95rem',
-  },
-  url: {
-    fontFamily: 'monospace',
-    fontSize: '0.85rem',
-    wordBreak: 'break-all',
-    background: colors.background,
-    padding: '0.6rem',
-    borderRadius: '0.4rem',
-    margin: '0 0 0.75rem 0',
-  },
-  copyButton: {
-    padding: '0.6rem 1rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  secondaryButton: {
-    padding: '0.6rem 1rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    background: colors.card,
-    color: colors.mutedText,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  enabled: {
-    color: colors.primary,
-    fontWeight: 600,
-    margin: '0 0 0.6rem 0',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-  },
 }

@@ -1,57 +1,32 @@
 import { NavLink } from 'react-router-dom'
-import { colors } from '../theme'
+import Icon from './Icon'
 
+// The four places you can be. Recipes used to be a small text link at the
+// top of the inventory screen, which hid a whole feature — it is a tab of
+// its own now.
 const tabs = [
-  { to: '/', label: 'List', icon: '📝', end: true },
-  { to: '/inventory', label: 'Inventory', icon: '🧊' },
-  { to: '/scan', label: 'Scan', icon: '📷' },
+  { to: '/', label: 'List', icon: 'list', end: true },
+  { to: '/inventory', label: 'Inventory', icon: 'fridge' },
+  { to: '/recipes', label: 'Recipes', icon: 'recipes' },
+  { to: '/scan', label: 'Scan', icon: 'scan' },
 ]
 
-// The three buttons every screen sits above. Big enough to hit with a
-// thumb while pushing a trolley — the small-scale version of Step 10's
-// "works one-handed" goal, applied now so it never has to be retrofitted.
 export default function BottomNav() {
   return (
-    <nav style={styles.nav}>
+    <nav className="fm-nav" aria-label="Main">
       {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
           end={tab.end}
-          style={({ isActive }) => ({
-            ...styles.tab,
-            color: isActive ? colors.primary : colors.mutedText,
-            fontWeight: isActive ? 700 : 500,
-          })}
+          // NavLink hands us whether this tab is the one being shown; the
+          // stripe above the icon and the green come from that class.
+          className={({ isActive }) => `fm-nav__tab${isActive ? ' is-active' : ''}`}
         >
-          <span style={styles.icon}>{tab.icon}</span>
+          <Icon name={tab.icon} />
           <span>{tab.label}</span>
         </NavLink>
       ))}
     </nav>
   )
-}
-
-const styles = {
-  nav: {
-    position: 'sticky',
-    bottom: 0,
-    display: 'flex',
-    borderTop: `1px solid ${colors.border}`,
-    background: colors.card,
-    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-  },
-  tab: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.15rem',
-    padding: '0.75rem 0',
-    textDecoration: 'none',
-    fontSize: '0.8rem',
-  },
-  icon: {
-    fontSize: '1.4rem',
-  },
 }

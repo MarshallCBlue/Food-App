@@ -1,15 +1,18 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useLocations } from '../state/useLocations'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Icon from '../components/Icon'
 
+// The cupboards, shelves and drawers things actually live in. These are
+// the headings the inventory is grouped under.
 export default function LocationManagerScreen() {
   const { household } = useAuth()
   const { locations, addLocation, renameLocation, deleteLocation } = useLocations(household.id)
-  const navigate = useNavigate()
   const [newName, setNewName] = useState('')
   const [error, setError] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
 
   async function handleAdd(event) {
     event.preventDefault()
@@ -23,7 +26,6 @@ export default function LocationManagerScreen() {
   }
 
   async function handleDelete(location) {
-    if (!window.confirm(`Delete "${location.name}"?`)) return
     setError(null)
     try {
       await deleteLocation(location.id)
@@ -37,38 +39,64 @@ export default function LocationManagerScreen() {
   }
 
   return (
-    <div style={{ paddingTop: '1rem' }}>
-      <div style={styles.header}>
-        <button type="button" style={styles.backButton} onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h2 style={styles.title}>Locations</h2>
-      </div>
+    <div>
+      <PageHeader
+        backTo="/inventory"
+        title="Places"
+        subtitle="The cupboards, shelves and drawers your inventory is grouped under"
+      />
 
-      {error && <p style={styles.error}>{error}</p>}
+      {error && (
+        <p className="fm-error" style={{ marginBottom: '1rem' }}>
+          <Icon name="alert" />
+          {error}
+        </p>
+      )}
 
-      <ul style={styles.list}>
+      <form onSubmit={handleAdd} className="fm-composer">
+        <div className="fm-inline">
+          <input
+            className="fm-field"
+            placeholder="e.g. Top shelf of the fridge"
+            value={newName}
+            onChange={(event) => setNewName(event.target.value)}
+            aria-label="New place name"
+          />
+          <button className="fm-btn" type="submit" disabled={!newName.trim()}>
+            <Icon name="plus" />
+            Add
+          </button>
+        </div>
+      </form>
+
+      <section className="fm-group">
+        <div className="fm-rail">
+          <h2 className="fm-rail__name">Where things live</h2>
+          <span className="fm-rail__count">{locations.length}</span>
+        </div>
+
         {locations.map((location) => (
           <LocationRow
             key={location.id}
             location={location}
             onRename={(name) => renameLocation(location.id, name)}
-            onDelete={() => handleDelete(location)}
+            onDelete={() => setPendingDelete(location)}
           />
         ))}
-      </ul>
+      </section>
 
-      <form onSubmit={handleAdd} style={styles.addForm}>
-        <input
-          style={styles.input}
-          placeholder="New location"
-          value={newName}
-          onChange={(event) => setNewName(event.target.value)}
+      {pendingDelete && (
+        <ConfirmDialog
+          title={`Delete ${pendingDelete.name}?`}
+          body="It has to be empty first. Anything still stored there has to be moved or used up."
+          confirmLabel="Delete place"
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => {
+            handleDelete(pendingDelete)
+            setPendingDelete(null)
+          }}
         />
-        <button style={styles.addButton} type="submit">
-          Add
-        </button>
-      </form>
+      )}
     </div>
   )
 }
@@ -78,104 +106,35 @@ function LocationRow({ location, onRename, onDelete }) {
   const [name, setName] = useState(location.name)
 
   return (
-    <li style={styles.row}>
-      {editing ? (
-        <input
-          style={styles.input}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          onBlur={() => {
-            setEditing(false)
-            if (name.trim() && name.trim() !== location.name) onRename(name.trim())
-          }}
-          autoFocus
-        />
-      ) : (
-        <button type="button" style={styles.nameButton} onClick={() => setEditing(true)}>
-          {location.name}
+    <div className="fm-row">
+      <div className="fm-row__main">
+        {editing ? (
+          <input
+            className="fm-field"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={() => {
+              setEditing(false)
+              if (name.trim() && name.trim() !== location.name) onRename(name.trim())
+            }}
+            aria-label={`Rename ${location.name}`}
+            autoFocus
+          />
+        ) : (
+          <button type="button" className="fm-row__button" onClick={() => setEditing(true)}>
+            <span className="fm-row__name">{location.name}</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="fm-icon-btn fm-icon-btn--danger"
+          onClick={onDelete}
+          aria-label={`Delete ${location.name}`}
+        >
+          <Icon name="trash" />
         </button>
-      )}
-
-      <button type="button" style={styles.deleteButton} onClick={onDelete} aria-label="Delete location">
-        ✕
-      </button>
-    </li>
+      </div>
+    </div>
   )
-}
-
-const styles = {
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    marginBottom: '1rem',
-  },
-  backButton: {
-    border: 'none',
-    background: 'none',
-    color: colors.primary,
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-    padding: 0,
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.2rem',
-  },
-  list: {
-    listStyle: 'none',
-    margin: 0,
-    padding: 0,
-  },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '0.5rem',
-    padding: '0.6rem 0',
-    borderBottom: `1px solid ${colors.border}`,
-  },
-  nameButton: {
-    flex: 1,
-    textAlign: 'left',
-    border: 'none',
-    background: 'none',
-    fontSize: '1rem',
-    padding: '0.3rem 0',
-    cursor: 'pointer',
-  },
-  deleteButton: {
-    width: '2rem',
-    height: '2rem',
-    borderRadius: '0.4rem',
-    border: `1px solid ${colors.border}`,
-    background: colors.card,
-    color: colors.danger,
-    cursor: 'pointer',
-  },
-  addForm: {
-    display: 'flex',
-    gap: '0.5rem',
-    marginTop: '1rem',
-  },
-  input: {
-    flex: 1,
-    padding: '0.6rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  addButton: {
-    padding: '0 1rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-  },
 }

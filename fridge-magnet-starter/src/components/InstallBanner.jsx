@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useInstallPrompt } from '../state/useInstallPrompt'
 import InstallCard from './InstallCard'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 const DISMISSED_KEY = 'fridge-magnet:install-banner-dismissed'
 
@@ -15,7 +15,7 @@ function wasDismissed() {
 
 // The install nudge shown across the top of the app until either it's
 // installed or someone dismisses it. The same instructions live
-// permanently on the Household screen for anyone who dismisses this and
+// permanently on the household screen for anyone who dismisses this and
 // changes their mind later.
 export default function InstallBanner() {
   const { standalone, platform } = useInstallPrompt()
@@ -35,33 +35,17 @@ export default function InstallBanner() {
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.content}>
-        <InstallCard compact />
-      </div>
-      <button type="button" style={styles.dismiss} onClick={dismiss} aria-label="Dismiss">
-        ✕
+    <div style={{ position: 'relative' }}>
+      <InstallCard />
+      <button
+        type="button"
+        className="fm-icon-btn"
+        style={{ position: 'absolute', top: 0, right: 0, width: 36, height: 36 }}
+        onClick={dismiss}
+        aria-label="Dismiss"
+      >
+        <Icon name="close" size={15} />
       </button>
     </div>
   )
-}
-
-const styles = {
-  wrap: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '0.5rem',
-    padding: '0.75rem 1.25rem 0',
-  },
-  content: {
-    flex: 1,
-  },
-  dismiss: {
-    border: 'none',
-    background: 'none',
-    color: colors.mutedText,
-    fontSize: '1rem',
-    cursor: 'pointer',
-    padding: '0.9rem 0 0 0',
-  },
 }

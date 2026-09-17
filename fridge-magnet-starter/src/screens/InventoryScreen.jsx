@@ -1,14 +1,20 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useLocations } from '../state/useLocations'
 import { useInventory, addItemToShoppingList } from '../state/useInventory'
+import { daysUntil } from '../lib/expiry'
 import AddInventoryItemForm from '../components/AddInventoryItemForm'
 import InventoryRow from '../components/InventoryRow'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import SkeletonRows from '../components/Skeleton'
+import Toast from '../components/Toast'
+import Icon from '../components/Icon'
 
 export default function InventoryScreen() {
   const { household } = useAuth()
+  const navigate = useNavigate()
   const { locations } = useLocations(household.id)
   const { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate } = useInventory(
     household.id
@@ -17,6 +23,13 @@ export default function InventoryScreen() {
   const [justEmptied, setJustEmptied] = useState(null)
 
   const groups = useMemo(() => groupByLocation(rows), [rows])
+
+  // How many things need eating this week — shown on the way into the
+  // expiring screen so the number is visible without going looking.
+  const pressing = useMemo(
+    () => rows.filter((row) => row.expires_on && daysUntil(row.expires_on) <= 3).length,
+    [rows]
+  )
 
   async function handleTakeSome(row, amount) {
     const depleted = await takeSome(row, amount)
@@ -36,47 +49,52 @@ export default function InventoryScreen() {
   }
 
   return (
-    <div style={{ paddingTop: '1rem' }}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Inventory</h2>
-        <div style={styles.headerLinks}>
-          <Link to="/recipes" style={styles.locationsLink}>
-            Recipes
-          </Link>
-          <Link to="/expiring" style={styles.locationsLink}>
-            Expiring
-          </Link>
-          <Link to="/locations" style={styles.locationsLink}>
-            Edit locations
-          </Link>
-        </div>
-      </div>
-
-      {justEmptied && (
-        <div style={styles.banner}>
-          <span>Out of {justEmptied.name}.</span>
-          <button type="button" style={styles.bannerButton} onClick={handleAddToShoppingList}>
-            Add to shopping list
-          </button>
-          <button
-            type="button"
-            style={styles.bannerDismiss}
-            onClick={() => setJustEmptied(null)}
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+    <div>
+      <PageHeader
+        title="Inventory"
+        subtitle={
+          rows.length > 0
+            ? `${rows.length} thing${rows.length === 1 ? '' : 's'} in ${groups.length} place${
+                groups.length === 1 ? '' : 's'
+              }`
+            : "What's in the cupboards, fridge and freezer"
+        }
+        actions={
+          <div className="fm-chips">
+            <button
+              type="button"
+              className={`fm-chip${pressing > 0 ? ' fm-chip--alert' : ''}`}
+              onClick={() => navigate('/expiring')}
+            >
+              <Icon name="clock" />
+              {pressing > 0 ? `${pressing} to use` : 'Expiring'}
+            </button>
+            <button type="button" className="fm-chip" onClick={() => navigate('/locations')}>
+              <Icon name="edit" />
+              Places
+            </button>
+          </div>
+        }
+      />
 
       <AddInventoryItemForm locations={locations} searchItems={searchItems} onAdd={addToInventory} />
 
-      {loading && <p style={styles.muted}>Loading…</p>}
-      {!loading && rows.length === 0 && <p style={styles.muted}>Nothing in the inventory yet.</p>}
+      {loading && <SkeletonRows rows={5} />}
+
+      {!loading && rows.length === 0 && (
+        <EmptyState
+          icon="fridge"
+          title="Nothing in the inventory yet"
+          body="Add something above, or tick items off your shopping list and tap the fridge tag to move them all in at once."
+        />
+      )}
 
       {groups.map((group) => (
-        <section key={group.name} style={styles.group}>
-          <h3 style={styles.groupHeading}>{group.name}</h3>
+        <section key={group.name} className="fm-group">
+          <div className="fm-rail">
+            <h2 className="fm-rail__name">{group.name}</h2>
+            <span className="fm-rail__count">{group.items.length}</span>
+          </div>
           {group.items.map((row) => (
             <InventoryRow
               key={row.id}
@@ -90,6 +108,15 @@ export default function InventoryScreen() {
           ))}
         </section>
       ))}
+
+      {justEmptied && (
+        <Toast
+          message={`Out of ${justEmptied.name}.`}
+          actionLabel="Add to list"
+          onAction={handleAddToShoppingList}
+          onDismiss={() => setJustEmptied(null)}
+        />
+      )}
     </div>
   )
 }
@@ -117,71 +144,4 @@ function groupByLocation(rows) {
   }
 
   return Array.from(map.values()).sort((a, b) => a.order - b.order)
-}
-
-const styles = {
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: '0.75rem',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.2rem',
-  },
-  headerLinks: {
-    display: 'flex',
-    gap: '0.75rem',
-  },
-  locationsLink: {
-    color: colors.primary,
-    fontSize: '0.85rem',
-    textDecoration: 'none',
-  },
-  banner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    background: colors.card,
-    border: `1px solid ${colors.border}`,
-    marginBottom: '1rem',
-    fontSize: '0.9rem',
-  },
-  bannerButton: {
-    marginLeft: 'auto',
-    padding: '0.4rem 0.7rem',
-    borderRadius: '0.4rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontWeight: 600,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  bannerDismiss: {
-    border: 'none',
-    background: 'none',
-    color: colors.mutedText,
-    cursor: 'pointer',
-    fontSize: '1rem',
-    padding: '0 0.2rem',
-  },
-  muted: {
-    color: colors.mutedText,
-    textAlign: 'center',
-    marginTop: '2rem',
-  },
-  group: {
-    marginBottom: '1rem',
-  },
-  groupHeading: {
-    margin: '0 0 0.25rem 0',
-    fontSize: '0.85rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: colors.mutedText,
-  },
 }

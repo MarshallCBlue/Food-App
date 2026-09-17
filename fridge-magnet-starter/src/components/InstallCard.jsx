@@ -1,5 +1,5 @@
 import { useInstallPrompt } from '../state/useInstallPrompt'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 // Platform-specific "how to install" guidance — Android can trigger the
 // browser's own install dialog directly; iOS Safari has no such API, so
@@ -11,63 +11,37 @@ export default function InstallCard({ compact = false }) {
   if (standalone || platform === 'other') return null
 
   return (
-    <div style={{ ...styles.card, ...(compact ? styles.compact : {}) }}>
-      <p style={styles.heading}>Install Fridge Magnet</p>
-      {platform === 'ios' && (
-        <p style={styles.body}>
-          Tap the Share button (
-          <span aria-hidden="true">⬆️</span>) at the bottom of Safari, then "Add to Home
-          Screen". This is also what turns on reminders (Step 9) — iPhone only sends
-          notifications to apps installed this way, never to a page open in the browser.
-        </p>
-      )}
-      {platform === 'android' && canPromptInstall && (
-        <>
-          <p style={styles.body}>
-            Get your own icon, a proper app window, and reminders when something's about to go
-            off.
+    <div className="fm-install" style={compact ? { margin: 0 } : undefined}>
+      <span className="fm-install__icon">
+        <Icon name="install" />
+      </span>
+      <div className="fm-install__text">
+        <p className="fm-install__title">Add Fridge Magnet to your home screen</p>
+
+        {platform === 'ios' && (
+          <p className="fm-install__body">
+            Tap Share at the bottom of Safari, then "Add to Home Screen". This is also what turns
+            reminders on: an iPhone only sends notifications to apps installed this way.
           </p>
-          <button type="button" style={styles.button} onClick={promptInstall}>
-            Install app
-          </button>
-        </>
-      )}
-      {platform === 'android' && !canPromptInstall && (
-        <p style={styles.body}>
-          Open the browser menu (⋮) and choose "Install app" or "Add to Home screen".
-        </p>
-      )}
+        )}
+
+        {platform === 'android' && canPromptInstall && (
+          <>
+            <p className="fm-install__body">
+              Your own icon, a proper app window, and a nudge when something is about to go off.
+            </p>
+            <button type="button" className="fm-btn fm-btn--sm" style={{ marginTop: '0.5rem' }} onClick={promptInstall}>
+              Install app
+            </button>
+          </>
+        )}
+
+        {platform === 'android' && !canPromptInstall && (
+          <p className="fm-install__body">
+            Open the browser menu and choose "Install app" or "Add to Home screen".
+          </p>
+        )}
+      </div>
     </div>
   )
-}
-
-const styles = {
-  card: {
-    padding: '1rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    border: `1px solid ${colors.border}`,
-    marginBottom: '1rem',
-  },
-  compact: {
-    marginBottom: 0,
-  },
-  heading: {
-    margin: '0 0 0.4rem 0',
-    fontWeight: 600,
-  },
-  body: {
-    margin: '0 0 0.6rem 0',
-    fontSize: '0.9rem',
-    color: colors.mutedText,
-  },
-  button: {
-    padding: '0.6rem 1rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
 }

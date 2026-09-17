@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave, onRemove }) {
   const [quantity, setQuantity] = useState(row.quantity)
@@ -20,31 +20,32 @@ export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave
   }, [editing])
 
   return (
-    <div style={styles.row}>
-      <div style={styles.rowMain}>
+    <div className={`fm-row${row.checked ? ' fm-row--done' : ''}`}>
+      <div className="fm-row__main">
         <input
           type="checkbox"
+          className="fm-check"
           checked={row.checked}
           onChange={onToggle}
-          style={styles.checkbox}
           aria-label={`Mark ${row.item.name} as bought`}
         />
-        <button type="button" style={styles.rowButton} onClick={onOpen}>
-          <span style={{ ...styles.rowName, ...(row.checked ? styles.rowNameChecked : {}) }}>{row.item.name}</span>
-          <span style={styles.rowQuantity}>
+        <button type="button" className="fm-row__button" onClick={onOpen} aria-expanded={editing}>
+          <span className="fm-row__label">
+            <span className="fm-row__name">{row.item.name}</span>
+            {row.note && !editing && <span className="fm-row__meta">{row.note}</span>}
+          </span>
+          <span className="fm-row__qty">
             {row.quantity}
             {row.unit ? ` ${row.unit}` : ''}
           </span>
         </button>
       </div>
 
-      {row.note && !editing && <p style={styles.note}>{row.note}</p>}
-
       {editing && (
-        <div style={styles.editPanel}>
-          <div style={styles.editRow}>
+        <div className="fm-row__panel fm-row__panel--indented">
+          <div className="fm-inline">
             <input
-              style={styles.editInput}
+              className="fm-field fm-field--qty"
               type="number"
               min="0"
               step="any"
@@ -53,121 +54,41 @@ export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave
               aria-label="Quantity"
             />
             <input
-              style={styles.editInput}
+              className="fm-field"
               placeholder="unit"
               value={unit}
               onChange={(event) => setUnit(event.target.value)}
+              aria-label="Unit"
             />
           </div>
           <input
-            style={styles.editInput}
+            className="fm-field"
             placeholder="Note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            aria-label="Note"
           />
-          <div style={styles.editActions}>
+          <div className="fm-inline">
             <button
               type="button"
-              style={styles.saveButton}
+              className="fm-btn fm-btn--block"
               onClick={() =>
                 onSave({ quantity: Number(quantity) || 1, unit: unit.trim() || null, note: note.trim() || null })
               }
             >
-              Save
+              Save changes
             </button>
-            <button type="button" style={styles.removeButton} onClick={onRemove}>
-              Remove
+            <button
+              type="button"
+              className="fm-icon-btn fm-icon-btn--bordered fm-icon-btn--danger"
+              onClick={onRemove}
+              aria-label={`Remove ${row.item.name} from the list`}
+            >
+              <Icon name="trash" />
             </button>
           </div>
         </div>
       )}
     </div>
   )
-}
-
-const styles = {
-  row: {
-    borderBottom: `1px solid ${colors.border}`,
-    padding: '0.6rem 0',
-  },
-  rowMain: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  checkbox: {
-    width: '1.3rem',
-    height: '1.3rem',
-    flexShrink: 0,
-  },
-  rowButton: {
-    flex: 1,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '0.5rem',
-    border: 'none',
-    background: 'none',
-    padding: '0.4rem 0',
-    textAlign: 'left',
-    cursor: 'pointer',
-  },
-  rowName: {
-    fontSize: '1rem',
-    color: colors.text,
-  },
-  rowNameChecked: {
-    color: colors.mutedText,
-    textDecoration: 'line-through',
-  },
-  rowQuantity: {
-    color: colors.mutedText,
-    fontSize: '0.9rem',
-    whiteSpace: 'nowrap',
-  },
-  note: {
-    margin: '0 0 0 2.05rem',
-    color: colors.mutedText,
-    fontSize: '0.85rem',
-  },
-  editPanel: {
-    marginTop: '0.5rem',
-    marginLeft: '2.05rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  editRow: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  editInput: {
-    flex: 1,
-    padding: '0.5rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '0.9rem',
-  },
-  editActions: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  saveButton: {
-    flex: 1,
-    padding: '0.6rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  removeButton: {
-    padding: '0.6rem 0.9rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.danger}`,
-    background: colors.card,
-    color: colors.danger,
-    cursor: 'pointer',
-  },
 }

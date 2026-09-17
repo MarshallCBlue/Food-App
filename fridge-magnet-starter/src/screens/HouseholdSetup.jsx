@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../state/AuthProvider'
 import { supabase } from '../supabaseClient'
 import Screen from '../components/Screen'
-import { colors } from '../theme'
+import Icon from '../components/Icon'
 
 // Shown once someone is signed in but belongs to no household yet. They
 // either start one (and get a code to hand to whoever else should join)
@@ -52,15 +52,12 @@ export default function HouseholdSetup() {
 
   if (created) {
     return (
-      <Screen>
-        <h1 style={styles.heading}>🧲 {created.name} is set up</h1>
-        <div style={styles.card}>
-          <p style={styles.bodyText}>
-            Share this code with anyone else who should see the same list:
-          </p>
-          <p style={styles.code}>{created.secret_code}</p>
-          <button style={styles.primaryButton} onClick={refreshHousehold}>
-            Continue to Fridge Magnet
+      <Screen title={`${created.name} is set up`} subtitle="One code, one shared list.">
+        <div className="fm-centre__card" style={{ textAlign: 'center' }}>
+          <p className="fm-note">Share this with anyone else who should see the same list:</p>
+          <p className="fm-code">{created.secret_code}</p>
+          <button className="fm-btn fm-btn--block" onClick={refreshHousehold}>
+            Start using Fridge Magnet
           </button>
         </div>
       </Screen>
@@ -69,21 +66,26 @@ export default function HouseholdSetup() {
 
   if (mode === 'create') {
     return (
-      <Screen>
-        <h1 style={styles.heading}>🧲 New household</h1>
-        <form onSubmit={handleCreate} style={styles.card}>
+      <Screen title="Name your household" subtitle="Whatever you would call it out loud.">
+        <form onSubmit={handleCreate} className="fm-centre__card">
           <input
-            style={styles.input}
+            className="fm-field"
             placeholder="e.g. The Marshalls"
             value={name}
             onChange={(event) => setName(event.target.value)}
+            aria-label="Household name"
             required
           />
-          {error && <p style={styles.error}>{error}</p>}
-          <button style={styles.primaryButton} type="submit" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create household'}
+          {error && (
+            <p className="fm-error">
+              <Icon name="alert" />
+              {error}
+            </p>
+          )}
+          <button className="fm-btn fm-btn--block" type="submit" disabled={submitting}>
+            {submitting ? 'Creating' : 'Create household'}
           </button>
-          <button style={styles.linkButton} type="button" onClick={() => setMode('choose')}>
+          <button className="fm-btn fm-btn--quiet fm-btn--block" type="button" onClick={() => setMode('choose')}>
             Back
           </button>
         </form>
@@ -93,22 +95,28 @@ export default function HouseholdSetup() {
 
   if (mode === 'join') {
     return (
-      <Screen>
-        <h1 style={styles.heading}>🧲 Join a household</h1>
-        <form onSubmit={handleJoin} style={styles.card}>
+      <Screen title="Join a household" subtitle="Type the six-character code you were given.">
+        <form onSubmit={handleJoin} className="fm-centre__card">
           <input
-            style={{ ...styles.input, ...styles.codeInput }}
+            className="fm-field"
+            style={{ textAlign: 'center', letterSpacing: '0.3em', textTransform: 'uppercase', fontWeight: 600 }}
             placeholder="ABC123"
             value={code}
             maxLength={6}
             onChange={(event) => setCode(event.target.value.toUpperCase())}
+            aria-label="Household code"
             required
           />
-          {error && <p style={styles.error}>{error}</p>}
-          <button style={styles.primaryButton} type="submit" disabled={submitting}>
-            {submitting ? 'Joining…' : 'Join household'}
+          {error && (
+            <p className="fm-error">
+              <Icon name="alert" />
+              {error}
+            </p>
+          )}
+          <button className="fm-btn fm-btn--block" type="submit" disabled={submitting}>
+            {submitting ? 'Joining' : 'Join household'}
           </button>
-          <button style={styles.linkButton} type="button" onClick={() => setMode('choose')}>
+          <button className="fm-btn fm-btn--quiet fm-btn--block" type="button" onClick={() => setMode('choose')}>
             Back
           </button>
         </form>
@@ -117,94 +125,22 @@ export default function HouseholdSetup() {
   }
 
   return (
-    <Screen>
-      <h1 style={styles.heading}>🧲 Almost there</h1>
-      <div style={styles.card}>
-        <p style={styles.bodyText}>Is this your first Fridge Magnet, or is someone already using one?</p>
-        <button style={styles.primaryButton} onClick={() => setMode('create')}>
-          Create a household
+    <Screen
+      title="Almost there"
+      subtitle="Is this your first Fridge Magnet, or is someone in the house already using one?"
+    >
+      <div className="fm-centre__card">
+        <button className="fm-btn fm-btn--block" onClick={() => setMode('create')}>
+          <Icon name="home" />
+          Start a household
         </button>
-        <button style={styles.secondaryButton} onClick={() => setMode('join')}>
+        <button className="fm-btn fm-btn--secondary fm-btn--block" onClick={() => setMode('join')}>
           Join with a code
         </button>
-        <button style={styles.linkButton} onClick={signOut}>
+        <button className="fm-btn fm-btn--quiet fm-btn--block" onClick={signOut}>
           Sign out
         </button>
       </div>
     </Screen>
   )
-}
-
-const styles = {
-  heading: {
-    fontSize: '1.75rem',
-    margin: 0,
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    width: '100%',
-    maxWidth: '22rem',
-    padding: '1.5rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-  },
-  bodyText: {
-    margin: '0 0 0.25rem 0',
-    color: colors.mutedText,
-  },
-  input: {
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  codeInput: {
-    textAlign: 'center',
-    letterSpacing: '0.3em',
-    textTransform: 'uppercase',
-    fontWeight: 600,
-  },
-  code: {
-    fontSize: '2rem',
-    fontWeight: 700,
-    letterSpacing: '0.2em',
-    margin: '0.25rem 0 0.75rem 0',
-    color: colors.primary,
-  },
-  primaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  secondaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.primary}`,
-    background: colors.card,
-    color: colors.primary,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  linkButton: {
-    padding: '0.25rem',
-    border: 'none',
-    background: 'none',
-    color: colors.mutedText,
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    margin: 0,
-    fontSize: '0.9rem',
-  },
 }

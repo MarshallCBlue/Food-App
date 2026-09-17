@@ -171,6 +171,24 @@ their next invocation. Once both are set, visit the Household screen on
 your phone (installed to the home screen first — that's the whole point
 of Step 9's first half) and tap "Turn on reminders".
 
+## How it looks
+
+The whole look of the app is decided in two places, and nowhere else:
+
+- `DESIGN.md` at the top of this repository explains where the look came
+  from and what the rules are.
+- `src/styles.css` holds the actual colours, text sizes and spacing, plus a
+  small set of reusable classes every screen uses. Change a colour there and
+  the whole app follows.
+
+Screens do not carry their own colours or spacing any more, so nothing can
+drift out of step.
+
+The app has four tabs along the bottom: **List**, **Inventory**, **Recipes**
+and **Scan**. Anything secondary — what is expiring, the aisle order, the
+places things live in, and the household settings — is reached from the
+screen it belongs to rather than from the bottom bar.
+
 ## Running this on your own computer (optional)
 
 You do not need to do this to use the live app. If you want to run a copy

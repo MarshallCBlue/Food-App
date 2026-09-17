@@ -2,34 +2,19 @@ import { Outlet } from 'react-router-dom'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
 import InstallBanner from './InstallBanner'
-import { colors } from '../theme'
 
-// The shell every signed-in screen sits inside once a household exists:
-// a header, whichever tab is active, and the three-button nav underneath.
+// The frame every signed-in screen sits inside: a slim header that stays
+// put while you scroll, the screen itself, and the four tabs pinned to
+// the bottom of the phone.
 export default function MainLayout() {
   return (
-    <div style={styles.app}>
-      <TopBar title="Fridge Magnet" />
-      <InstallBanner />
-      <div style={styles.content}>
+    <div className="fm-app">
+      <TopBar />
+      <main className="fm-main">
+        <InstallBanner />
         <Outlet />
-      </div>
+      </main>
       <BottomNav />
     </div>
   )
-}
-
-const styles = {
-  app: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    color: colors.text,
-    background: colors.background,
-  },
-  content: {
-    flex: 1,
-    padding: '0 1.25rem 1.25rem 1.25rem',
-  },
 }

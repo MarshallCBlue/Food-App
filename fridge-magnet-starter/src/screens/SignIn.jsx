@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../state/AuthProvider'
 import Screen from '../components/Screen'
-import { colors } from '../theme'
+import Icon from '../components/Icon'
 
 export default function SignIn() {
   const { signIn, signUp } = useAuth()
@@ -11,6 +11,12 @@ export default function SignIn() {
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  function switchMode(next) {
+    setError(null)
+    setMessage(null)
+    setMode(next)
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -35,107 +41,65 @@ export default function SignIn() {
   }
 
   return (
-    <Screen>
-      <h1 style={styles.heading}>🧲 Fridge Magnet</h1>
-      <form onSubmit={handleSubmit} style={styles.card}>
-        <h2 style={styles.cardHeading}>
-          {mode === 'signIn' ? 'Sign in' : 'Create your account'}
-        </h2>
+    <Screen title="Fridge Magnet" subtitle="Shopping list, kitchen inventory, and one tap on the fridge.">
+      <form onSubmit={handleSubmit} className="fm-centre__card">
+        {/* Two equal choices side by side, rather than a link hidden
+            under the button. */}
+        <div className="fm-segment" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'signIn'}
+            className={`fm-segment__option${mode === 'signIn' ? ' is-active' : ''}`}
+            onClick={() => switchMode('signIn')}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'signUp'}
+            className={`fm-segment__option${mode === 'signUp' ? ' is-active' : ''}`}
+            onClick={() => switchMode('signUp')}
+          >
+            Create account
+          </button>
+        </div>
 
         <input
-          style={styles.input}
+          className="fm-field"
           type="email"
           placeholder="Email"
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          aria-label="Email"
           required
         />
         <input
-          style={styles.input}
+          className="fm-field"
           type="password"
           placeholder="Password"
           autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
+          aria-label="Password"
           minLength={6}
           required
         />
 
-        {error && <p style={styles.error}>{error}</p>}
-        {message && <p style={styles.message}>{message}</p>}
+        {error && (
+          <p className="fm-error">
+            <Icon name="alert" />
+            {error}
+          </p>
+        )}
+        {message && <p className="fm-note">{message}</p>}
 
-        <button style={styles.primaryButton} type="submit" disabled={submitting}>
-          {submitting ? 'Please wait…' : mode === 'signIn' ? 'Sign in' : 'Create account'}
-        </button>
-
-        <button
-          style={styles.linkButton}
-          type="button"
-          onClick={() => {
-            setError(null)
-            setMessage(null)
-            setMode(mode === 'signIn' ? 'signUp' : 'signIn')
-          }}
-        >
-          {mode === 'signIn' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
+        <button className="fm-btn fm-btn--block" type="submit" disabled={submitting}>
+          {submitting ? 'One moment' : mode === 'signIn' ? 'Sign in' : 'Create account'}
         </button>
       </form>
     </Screen>
   )
-}
-
-const styles = {
-  heading: {
-    fontSize: '2rem',
-    margin: 0,
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    width: '100%',
-    maxWidth: '22rem',
-    padding: '1.5rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-  },
-  cardHeading: {
-    margin: '0 0 0.25rem 0',
-  },
-  input: {
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  primaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  linkButton: {
-    padding: '0.25rem',
-    border: 'none',
-    background: 'none',
-    color: colors.primary,
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    margin: 0,
-    fontSize: '0.9rem',
-  },
-  message: {
-    color: colors.mutedText,
-    margin: 0,
-    fontSize: '0.9rem',
-  },
 }

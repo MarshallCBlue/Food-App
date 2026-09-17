@@ -8,7 +8,8 @@ import { findItemByBarcode, createCatalogueItem } from '../state/catalogue'
 import { lookupBarcode } from '../lib/openFoodFacts'
 import { isPerishableCategory } from '../lib/categoryGuess'
 import BarcodeCamera from '../components/BarcodeCamera'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import Icon from '../components/Icon'
 
 export default function ScanScreen() {
   const { household } = useAuth()
@@ -66,11 +67,18 @@ export default function ScanScreen() {
 
   if (stage === 'added') {
     return (
-      <div style={styles.centered}>
-        <h2 style={styles.title}>Added {addedName}</h2>
-        <button type="button" style={styles.primaryButton} onClick={reset}>
-          Scan another
-        </button>
+      <div>
+        <PageHeader title="Added" />
+        <div className="fm-panel" style={{ textAlign: 'center' }}>
+          <p className="fm-ok" style={{ justifyContent: 'center' }}>
+            <Icon name="check" />
+            {addedName} added
+          </p>
+          <button type="button" className="fm-btn fm-btn--block" style={{ marginTop: '1rem' }} onClick={reset}>
+            <Icon name="scan" />
+            Scan another
+          </button>
+        </div>
       </div>
     )
   }
@@ -94,11 +102,27 @@ export default function ScanScreen() {
   }
 
   return (
-    <div style={styles.centered}>
-      <h2 style={styles.title}>Scan a barcode</h2>
+    <div>
+      <PageHeader
+        title="Scan"
+        subtitle="Point at a barcode to put it on the list or straight into the inventory"
+      />
 
-      {lookupError && <p style={styles.error}>Couldn't look that up: {lookupError}</p>}
-      {stage === 'looking-up' && <p style={styles.muted}>Looking it up…</p>}
+      {lookupError && (
+        <p className="fm-error" style={{ marginBottom: '1rem' }}>
+          <Icon name="alert" />
+          That barcode could not be looked up: {lookupError}
+        </p>
+      )}
+
+      {stage === 'looking-up' && (
+        <div className="fm-panel" style={{ textAlign: 'center' }}>
+          <div className="fm-skeleton" style={{ height: '0.95rem', width: '60%', margin: '0 auto' }} />
+          <p className="fm-note" style={{ marginTop: '0.75rem' }}>
+            Looking that barcode up
+          </p>
+        </div>
+      )}
 
       {stage !== 'looking-up' && stage !== 'manual' && (
         <BarcodeCamera
@@ -109,19 +133,24 @@ export default function ScanScreen() {
       )}
 
       {stage === 'manual' && (
-        <form onSubmit={handleManualSubmit} style={styles.manualForm}>
+        <form onSubmit={handleManualSubmit} className="fm-composer">
           <input
-            style={styles.input}
+            className="fm-field"
             placeholder="Barcode number"
             inputMode="numeric"
             value={manualCode}
             onChange={(event) => setManualCode(event.target.value)}
+            aria-label="Barcode number"
             autoFocus
           />
-          <button type="submit" style={styles.primaryButton}>
-            Look up
+          <button type="submit" className="fm-btn fm-btn--block">
+            Look it up
           </button>
-          <button type="button" style={styles.linkButton} onClick={() => setStage('scanning')}>
+          <button
+            type="button"
+            className="fm-btn fm-btn--quiet fm-btn--block"
+            onClick={() => setStage('scanning')}
+          >
             Use the camera instead
           </button>
         </form>
@@ -187,7 +216,7 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
   async function handleAddToInventory() {
     setError(null)
     if (!name.trim()) return setError('Type a name for this item.')
-    if (!hasKnownLocation && !locationId) return setError("Pick where this is going.")
+    if (!hasKnownLocation && !locationId) return setError('Pick where this is going.')
 
     setSubmitting('inventory')
     try {
@@ -209,187 +238,111 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
   }
 
   return (
-    <div style={styles.resultWrap}>
-      <h2 style={styles.title}>{isKnown ? 'Already in your catalogue' : 'New product'}</h2>
+    <div>
+      <PageHeader
+        title={isKnown ? resolved.item.name : 'New product'}
+        subtitle={isKnown ? 'You have bought this before' : 'Not one of yours yet, so it needs a home'}
+      />
 
-      {isKnown ? (
-        <p style={styles.itemName}>{resolved.item.name}</p>
-      ) : (
-        <input
-          style={styles.input}
-          placeholder="Product name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-      )}
-
-      {!isKnown && (
-        <select style={styles.input} value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-          <option value="">Which aisle? (for the shopping list)</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {!hasKnownLocation && (
-        <select style={styles.input} value={locationId} onChange={(event) => setLocationId(event.target.value)}>
-          <option value="">Where's it stored? (for the inventory)</option>
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <div style={styles.detailsRow}>
-        <input
-          style={{ ...styles.input, ...styles.quantityInput }}
-          type="number"
-          min="0"
-          step="any"
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-          aria-label="Quantity"
-        />
-        <input
-          style={{ ...styles.input, ...styles.unitInput }}
-          placeholder="unit (optional)"
-          value={unit}
-          onChange={(event) => setUnit(event.target.value)}
-        />
-      </div>
-
-      {showExpiryField && (
-        <label style={styles.dateLabel}>
-          Use-by date (optional)
+      <div className="fm-panel fm-stack">
+        {!isKnown && (
           <input
-            style={styles.input}
-            type="date"
-            value={expiresOn}
-            onChange={(event) => setExpiresOn(event.target.value)}
+            className="fm-field"
+            placeholder="Product name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            aria-label="Product name"
           />
-        </label>
-      )}
+        )}
 
-      {error && <p style={styles.error}>{error}</p>}
+        {!isKnown && (
+          <select
+            className="fm-field"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            aria-label="Aisle"
+          >
+            <option value="">Which aisle? (for the shopping list)</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        )}
 
-      <div style={styles.actionRow}>
-        <button type="button" style={styles.primaryButton} onClick={handleAddToList} disabled={!!submitting}>
-          {submitting === 'list' ? 'Adding…' : 'Add to shopping list'}
+        {!hasKnownLocation && (
+          <select
+            className="fm-field"
+            value={locationId}
+            onChange={(event) => setLocationId(event.target.value)}
+            aria-label="Where it is stored"
+          >
+            <option value="">Where's it stored? (for the inventory)</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <div className="fm-inline">
+          <input
+            className="fm-field fm-field--qty"
+            type="number"
+            min="0"
+            step="any"
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+            aria-label="Quantity"
+          />
+          <input
+            className="fm-field"
+            placeholder="unit (optional)"
+            value={unit}
+            onChange={(event) => setUnit(event.target.value)}
+            aria-label="Unit"
+          />
+        </div>
+
+        {showExpiryField && (
+          <label className="fm-label">
+            Use-by date (optional)
+            <input
+              className="fm-field"
+              type="date"
+              value={expiresOn}
+              onChange={(event) => setExpiresOn(event.target.value)}
+            />
+          </label>
+        )}
+
+        {error && (
+          <p className="fm-error">
+            <Icon name="alert" />
+            {error}
+          </p>
+        )}
+
+        <button type="button" className="fm-btn fm-btn--block" onClick={handleAddToList} disabled={!!submitting}>
+          <Icon name="list" />
+          {submitting === 'list' ? 'Adding' : 'Add to shopping list'}
         </button>
-        <button type="button" style={styles.secondaryButton} onClick={handleAddToInventory} disabled={!!submitting}>
-          {submitting === 'inventory' ? 'Adding…' : 'Add to inventory'}
+        <button
+          type="button"
+          className="fm-btn fm-btn--secondary fm-btn--block"
+          onClick={handleAddToInventory}
+          disabled={!!submitting}
+        >
+          <Icon name="fridge" />
+          {submitting === 'inventory' ? 'Adding' : 'Add to inventory'}
         </button>
       </div>
 
-      <button type="button" style={styles.linkButton} onClick={onCancel}>
+      <button type="button" className="fm-btn fm-btn--quiet fm-btn--block" style={{ marginTop: '0.75rem' }} onClick={onCancel}>
         Cancel
       </button>
     </div>
   )
-}
-
-const styles = {
-  centered: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.75rem',
-    paddingTop: '1rem',
-    textAlign: 'center',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.2rem',
-  },
-  muted: {
-    color: colors.mutedText,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-    margin: 0,
-  },
-  manualForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    width: '100%',
-    maxWidth: '20rem',
-  },
-  resultWrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.6rem',
-    paddingTop: '1rem',
-    maxWidth: '24rem',
-    margin: '0 auto',
-  },
-  itemName: {
-    fontSize: '1.1rem',
-    fontWeight: 600,
-    margin: 0,
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '0.7rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  detailsRow: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  quantityInput: {
-    flex: '0 0 5rem',
-  },
-  unitInput: {
-    flex: 1,
-  },
-  dateLabel: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.3rem',
-    fontSize: '0.85rem',
-    color: colors.mutedText,
-  },
-  actionRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    marginTop: '0.5rem',
-  },
-  primaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  secondaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.primary}`,
-    background: colors.card,
-    color: colors.primary,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  linkButton: {
-    border: 'none',
-    background: 'none',
-    color: colors.mutedText,
-    fontSize: '0.9rem',
-    cursor: 'pointer',
-  },
 }

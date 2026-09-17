@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useCategories } from '../state/useCategories'
 import { useShoppingList } from '../state/useShoppingList'
 import AddItemForm from '../components/AddItemForm'
 import ShoppingListRow from '../components/ShoppingListRow'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import EmptyState from '../components/EmptyState'
+import SkeletonRows from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 export default function ShoppingListScreen() {
   const { household } = useAuth()
+  const navigate = useNavigate()
   const { categories } = useCategories(household.id)
   const { rows, loading, searchItems, addToList, toggleChecked, updateRow, removeRow } = useShoppingList(
     household.id
@@ -16,43 +20,67 @@ export default function ShoppingListScreen() {
   const [editingId, setEditingId] = useState(null)
 
   const groups = useMemo(() => groupByAisle(rows), [rows])
+  const ticked = rows.filter((row) => row.checked).length
 
   return (
-    <div style={{ paddingTop: '1rem' }}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Shopping list</h2>
-        <Link to="/aisles" style={styles.aislesLink}>
-          Edit aisles
-        </Link>
-      </div>
+    <div>
+      <PageHeader
+        title="Shopping list"
+        subtitle={
+          rows.length > 0
+            ? `${ticked} of ${rows.length} ticked off`
+            : 'Everything you need on the next shop'
+        }
+        actions={
+          <div className="fm-chips">
+            <button type="button" className="fm-chip" onClick={() => navigate('/aisles')}>
+              <Icon name="edit" />
+              Aisles
+            </button>
+          </div>
+        }
+      />
 
       <AddItemForm categories={categories} searchItems={searchItems} onAdd={addToList} />
 
-      {loading && <p style={styles.muted}>Loading…</p>}
-      {!loading && rows.length === 0 && <p style={styles.muted}>Nothing on the list. Add something above.</p>}
+      {loading && <SkeletonRows rows={5} />}
 
-      {groups.map((group) => (
-        <section key={group.name} style={styles.group}>
-          <h3 style={styles.groupHeading}>{group.name}</h3>
-          {group.items.map((row) => (
-            <ShoppingListRow
-              key={row.id}
-              row={row}
-              editing={editingId === row.id}
-              onToggle={() => toggleChecked(row.id, !row.checked)}
-              onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
-              onSave={(fields) => {
-                updateRow(row.id, fields)
-                setEditingId(null)
-              }}
-              onRemove={() => {
-                removeRow(row.id)
-                setEditingId(null)
-              }}
-            />
-          ))}
-        </section>
-      ))}
+      {!loading && rows.length === 0 && (
+        <EmptyState
+          icon="basket"
+          title="The list is empty"
+          body="Add something above, or scan a barcode. Items you have bought before remember which aisle they live in."
+        />
+      )}
+
+      {groups.map((group) => {
+        const left = group.items.filter((row) => !row.checked).length
+        return (
+          <section key={group.name} className="fm-group">
+            <div className="fm-rail">
+              <h2 className="fm-rail__name">{group.name}</h2>
+              <span className="fm-rail__count">{left === 0 ? 'all done' : `${left} left`}</span>
+            </div>
+            {group.items.map((row) => (
+              <ShoppingListRow
+                key={row.id}
+                row={row}
+                editing={editingId === row.id}
+                onToggle={() => toggleChecked(row.id, !row.checked)}
+                onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
+                onSave={(fields) => {
+                  updateRow(row.id, fields)
+                  setEditingId(null)
+                }}
+                onRemove={() => {
+                  removeRow(row.id)
+                  setEditingId(null)
+                }}
+              />
+            ))}
+          </section>
+        )
+      })}
     </div>
   )
 }
@@ -84,37 +112,4 @@ function groupByAisle(rows) {
   }
 
   return Array.from(map.values()).sort((a, b) => a.order - b.order)
-}
-
-const styles = {
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: '0.75rem',
-  },
-  title: {
-    margin: 0,
-    fontSize: '1.2rem',
-  },
-  aislesLink: {
-    color: colors.primary,
-    fontSize: '0.85rem',
-    textDecoration: 'none',
-  },
-  muted: {
-    color: colors.mutedText,
-    textAlign: 'center',
-    marginTop: '2rem',
-  },
-  group: {
-    marginBottom: '1rem',
-  },
-  groupHeading: {
-    margin: '0 0 0.25rem 0',
-    fontSize: '0.85rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    color: colors.mutedText,
-  },
 }

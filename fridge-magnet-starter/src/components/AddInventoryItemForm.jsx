@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { colors } from '../theme'
+import Icon from './Icon'
 
 // Like AddItemForm on the shopping list, but the location picker always
 // shows — even a repeat item might go in the freezer this time instead of
@@ -16,6 +16,8 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
+
+  const expanded = name.trim().length > 0
 
   useEffect(() => {
     if (selectedItem) return
@@ -71,19 +73,20 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
   }
 
   return (
-    <form onSubmit={handleSubmit} style={styles.form}>
-      <div style={styles.nameField}>
+    <form onSubmit={handleSubmit} className={`fm-composer${expanded ? '' : ' fm-composer--tight'}`}>
+      <div className="fm-suggest-wrap">
         <input
-          style={styles.input}
-          placeholder="Add to inventory…"
+          className="fm-field"
+          placeholder="Add to the inventory"
           value={name}
           onChange={(event) => handleNameChange(event.target.value)}
+          aria-label="Item name"
         />
         {suggestions.length > 0 && (
-          <ul style={styles.suggestions}>
+          <ul className="fm-suggest">
             {suggestions.map((item) => (
               <li key={item.id}>
-                <button type="button" style={styles.suggestionButton} onClick={() => pickSuggestion(item)}>
+                <button type="button" className="fm-suggest__item" onClick={() => pickSuggestion(item)}>
                   {item.name}
                 </button>
               </li>
@@ -92,125 +95,64 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
         )}
       </div>
 
-      {name.trim() && (
-        <select style={styles.input} value={locationId} onChange={(event) => setLocationId(event.target.value)}>
-          <option value="">Where's this going?</option>
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.name}
-            </option>
-          ))}
-        </select>
+      {expanded && (
+        <>
+          <select
+            className="fm-field"
+            value={locationId}
+            onChange={(event) => setLocationId(event.target.value)}
+            aria-label="Where it is stored"
+          >
+            <option value="">Where's this going?</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
+
+          <div className="fm-inline">
+            <input
+              className="fm-field fm-field--qty"
+              type="number"
+              min="0"
+              step="any"
+              value={quantity}
+              onChange={(event) => setQuantity(event.target.value)}
+              aria-label="Quantity"
+            />
+            <input
+              className="fm-field"
+              placeholder="unit (optional)"
+              value={unit}
+              onChange={(event) => setUnit(event.target.value)}
+              aria-label="Unit"
+            />
+          </div>
+
+          <label className="fm-label">
+            Use-by date (optional)
+            <input
+              className="fm-field"
+              type="date"
+              value={expiresOn}
+              onChange={(event) => setExpiresOn(event.target.value)}
+            />
+          </label>
+
+          {error && (
+            <p className="fm-error">
+              <Icon name="alert" />
+              {error}
+            </p>
+          )}
+
+          <button className="fm-btn fm-btn--block" type="submit" disabled={submitting}>
+            <Icon name="plus" />
+            {submitting ? 'Adding' : 'Add to inventory'}
+          </button>
+        </>
       )}
-
-      <div style={styles.detailsRow}>
-        <input
-          style={{ ...styles.input, ...styles.quantityInput }}
-          type="number"
-          min="0"
-          step="any"
-          value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
-          aria-label="Quantity"
-        />
-        <input
-          style={{ ...styles.input, ...styles.unitInput }}
-          placeholder="unit (optional)"
-          value={unit}
-          onChange={(event) => setUnit(event.target.value)}
-        />
-      </div>
-
-      <label style={styles.dateLabel}>
-        Use-by date (optional)
-        <input
-          style={styles.input}
-          type="date"
-          value={expiresOn}
-          onChange={(event) => setExpiresOn(event.target.value)}
-        />
-      </label>
-
-      {error && <p style={styles.error}>{error}</p>}
-
-      <button style={styles.addButton} type="submit" disabled={submitting || !name.trim()}>
-        {submitting ? 'Adding…' : 'Add to inventory'}
-      </button>
     </form>
   )
-}
-
-const styles = {
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-    padding: '1rem',
-    borderRadius: '0.75rem',
-    background: colors.card,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    marginBottom: '1.25rem',
-  },
-  nameField: {
-    position: 'relative',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '0.7rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  suggestions: {
-    listStyle: 'none',
-    margin: '0.25rem 0 0 0',
-    padding: 0,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '0.5rem',
-    background: colors.card,
-    overflow: 'hidden',
-  },
-  suggestionButton: {
-    display: 'block',
-    width: '100%',
-    textAlign: 'left',
-    padding: '0.6rem 0.75rem',
-    border: 'none',
-    background: 'none',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-  },
-  detailsRow: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  quantityInput: {
-    flex: '0 0 5rem',
-  },
-  unitInput: {
-    flex: 1,
-  },
-  dateLabel: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.3rem',
-    fontSize: '0.85rem',
-    color: colors.mutedText,
-  },
-  addButton: {
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    margin: 0,
-    fontSize: '0.9rem',
-  },
 }

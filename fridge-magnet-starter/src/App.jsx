@@ -23,11 +23,9 @@ export default function App() {
   const { session, household } = useAuth()
 
   if (session === undefined || household === undefined) {
-    return (
-      <Screen>
-        <p>Loading…</p>
-      </Screen>
-    )
+    // The first moment after opening, while Supabase is asked who is
+    // signed in. A quiet mark rather than the word "Loading".
+    return <Screen subtitle="Opening your kitchen" />
   }
 
   if (!session) {

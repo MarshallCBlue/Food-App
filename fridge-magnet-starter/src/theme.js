@@ -1,14 +1,19 @@
-// Shared colours, used by every screen so the app looks like one thing
-// rather than a pile of separately-styled pages. Real visual polish is
-// Step 10 — this just keeps things consistent until then.
+// The colours the app uses, as names that point at the real values in
+// styles.css. Keeping one copy means a colour can never drift out of step
+// between the stylesheet and the JavaScript.
+//
+// Each value is a "var(--fm-…)" reference, which is what CSS expects, so
+// these can be dropped straight into a style attribute where a component
+// genuinely needs to pick a colour at runtime. Everywhere else, use the
+// "fm-" classes in styles.css instead.
 export const colors = {
-  background: '#f4f8f5',
-  text: '#1a2e22',
-  mutedText: '#4a5f52',
-  card: '#ffffff',
-  primary: '#2f6f4f',
-  primaryText: '#ffffff',
-  border: '#d7e2da',
-  danger: '#b3261e',
-  warning: '#a3670a',
+  background: 'var(--fm-paper)',
+  text: 'var(--fm-ink)',
+  mutedText: 'var(--fm-muted)',
+  card: 'var(--fm-slip)',
+  primary: 'var(--fm-brand)',
+  primaryText: 'oklch(100% 0 0)',
+  border: 'var(--fm-line)',
+  danger: 'var(--fm-signal)',
+  warning: 'var(--fm-warn)',
 }

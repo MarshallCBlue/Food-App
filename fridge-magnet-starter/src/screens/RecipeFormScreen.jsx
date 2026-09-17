@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useRecipes } from '../state/useRecipes'
-import { colors } from '../theme'
+import PageHeader from '../components/PageHeader'
+import SkeletonRows from '../components/Skeleton'
+import Icon from '../components/Icon'
 
 function blankIngredient() {
   return { key: crypto.randomUUID(), itemId: null, name: '', quantity: '1', unit: '' }
@@ -52,7 +54,9 @@ export default function RecipeFormScreen() {
   }, [isEditing, recipeId, loadRecipeWithIngredients])
 
   function updateIngredient(key, patch) {
-    setIngredients((current) => current.map((ingredient) => (ingredient.key === key ? { ...ingredient, ...patch } : ingredient)))
+    setIngredients((current) =>
+      current.map((ingredient) => (ingredient.key === key ? { ...ingredient, ...patch } : ingredient))
+    )
   }
 
   function removeIngredient(key) {
@@ -83,24 +87,35 @@ export default function RecipeFormScreen() {
   }
 
   if (!loaded) {
-    return <p style={styles.muted}>Loading…</p>
+    return (
+      <div>
+        <PageHeader backTo="/recipes" title="Edit recipe" />
+        <SkeletonRows rows={3} />
+      </div>
+    )
   }
 
   return (
-    <div style={{ paddingTop: '1rem' }}>
-      <h2 style={styles.title}>{isEditing ? 'Edit recipe' : 'New recipe'}</h2>
+    <div>
+      <PageHeader
+        backTo="/recipes"
+        title={isEditing ? 'Edit recipe' : 'New recipe'}
+        subtitle="Ingredients are matched to the things you already buy, so cooking it knows what to take out"
+      />
 
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleSubmit} className="fm-stack fm-stack--loose">
         <input
-          style={styles.input}
+          className="fm-field"
           placeholder="Recipe name"
           value={name}
           onChange={(event) => setName(event.target.value)}
+          aria-label="Recipe name"
         />
 
-        {ingredients.map((ingredient) => (
+        {ingredients.map((ingredient, index) => (
           <IngredientRow
             key={ingredient.key}
+            index={index}
             ingredient={ingredient}
             searchItems={searchItems}
             onChange={(patch) => updateIngredient(ingredient.key, patch)}
@@ -108,21 +123,31 @@ export default function RecipeFormScreen() {
           />
         ))}
 
-        <button type="button" style={styles.addIngredientButton} onClick={() => setIngredients((c) => [...c, blankIngredient()])}>
-          + Add ingredient
+        <button
+          type="button"
+          className="fm-btn fm-btn--dashed fm-btn--block"
+          onClick={() => setIngredients((current) => [...current, blankIngredient()])}
+        >
+          <Icon name="plus" />
+          Add ingredient
         </button>
 
-        {error && <p style={styles.error}>{error}</p>}
+        {error && (
+          <p className="fm-error">
+            <Icon name="alert" />
+            {error}
+          </p>
+        )}
 
-        <button type="submit" style={styles.primaryButton} disabled={submitting}>
-          {submitting ? 'Saving…' : 'Save recipe'}
+        <button type="submit" className="fm-btn fm-btn--block" disabled={submitting}>
+          {submitting ? 'Saving' : 'Save recipe'}
         </button>
       </form>
     </div>
   )
 }
 
-function IngredientRow({ ingredient, searchItems, onChange, onRemove }) {
+function IngredientRow({ index, ingredient, searchItems, onChange, onRemove }) {
   const [suggestions, setSuggestions] = useState([])
   const debounceRef = useRef(null)
 
@@ -139,23 +164,26 @@ function IngredientRow({ ingredient, searchItems, onChange, onRemove }) {
   }, [ingredient.name, ingredient.itemId, searchItems])
 
   return (
-    <div style={styles.ingredientRow}>
-      <div style={styles.ingredientMainRow}>
-        <div style={styles.nameField}>
+    <div className="fm-panel">
+      <div className="fm-inline" style={{ alignItems: 'flex-start' }}>
+        <div className="fm-suggest-wrap" style={{ flex: 1 }}>
           <input
-            style={styles.input}
-            placeholder="Ingredient"
+            className="fm-field"
+            placeholder={`Ingredient ${index + 1}`}
             value={ingredient.name}
             onChange={(event) => onChange({ name: event.target.value, itemId: null })}
+            aria-label={`Ingredient ${index + 1}`}
           />
           {suggestions.length > 0 && (
-            <ul style={styles.suggestions}>
+            <ul className="fm-suggest">
               {suggestions.map((item) => (
                 <li key={item.id}>
                   <button
                     type="button"
-                    style={styles.suggestionButton}
-                    onClick={() => onChange({ itemId: item.id, name: item.name, unit: item.default_unit || ingredient.unit })}
+                    className="fm-suggest__item"
+                    onClick={() =>
+                      onChange({ itemId: item.id, name: item.name, unit: item.default_unit || ingredient.unit })
+                    }
                   >
                     {item.name}
                   </button>
@@ -164,13 +192,19 @@ function IngredientRow({ ingredient, searchItems, onChange, onRemove }) {
             </ul>
           )}
         </div>
-        <button type="button" style={styles.removeButton} onClick={onRemove} aria-label="Remove ingredient">
-          ✕
+        <button
+          type="button"
+          className="fm-icon-btn fm-icon-btn--bordered fm-icon-btn--danger"
+          onClick={onRemove}
+          aria-label={`Remove ingredient ${index + 1}`}
+        >
+          <Icon name="close" />
         </button>
       </div>
-      <div style={styles.detailsRow}>
+
+      <div className="fm-inline" style={{ marginTop: '0.5rem' }}>
         <input
-          style={{ ...styles.input, ...styles.quantityInput }}
+          className="fm-field fm-field--qty"
           type="number"
           min="0"
           step="any"
@@ -179,120 +213,13 @@ function IngredientRow({ ingredient, searchItems, onChange, onRemove }) {
           aria-label="Quantity"
         />
         <input
-          style={{ ...styles.input, ...styles.unitInput }}
+          className="fm-field"
           placeholder="unit (optional)"
           value={ingredient.unit}
           onChange={(event) => onChange({ unit: event.target.value })}
+          aria-label="Unit"
         />
       </div>
     </div>
   )
-}
-
-const styles = {
-  title: {
-    margin: '0 0 1rem 0',
-    fontSize: '1.2rem',
-  },
-  muted: {
-    color: colors.mutedText,
-    textAlign: 'center',
-    marginTop: '2rem',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '0.7rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    fontSize: '1rem',
-  },
-  ingredientRow: {
-    padding: '0.75rem',
-    borderRadius: '0.5rem',
-    background: colors.card,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  ingredientMainRow: {
-    display: 'flex',
-    gap: '0.5rem',
-    alignItems: 'flex-start',
-  },
-  nameField: {
-    flex: 1,
-    position: 'relative',
-  },
-  suggestions: {
-    listStyle: 'none',
-    margin: '0.25rem 0 0 0',
-    padding: 0,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '0.5rem',
-    background: colors.card,
-    overflow: 'hidden',
-    position: 'absolute',
-    width: '100%',
-    zIndex: 1,
-  },
-  suggestionButton: {
-    display: 'block',
-    width: '100%',
-    textAlign: 'left',
-    padding: '0.6rem 0.75rem',
-    border: 'none',
-    background: 'none',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-  },
-  detailsRow: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  quantityInput: {
-    flex: '0 0 5rem',
-  },
-  unitInput: {
-    flex: 1,
-  },
-  removeButton: {
-    flexShrink: 0,
-    width: '2.5rem',
-    height: '2.5rem',
-    borderRadius: '0.5rem',
-    border: `1px solid ${colors.border}`,
-    background: colors.background,
-    color: colors.danger,
-    cursor: 'pointer',
-  },
-  addIngredientButton: {
-    padding: '0.6rem',
-    borderRadius: '0.5rem',
-    border: `1px dashed ${colors.border}`,
-    background: 'none',
-    color: colors.primary,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  primaryButton: {
-    padding: '0.85rem',
-    borderRadius: '0.5rem',
-    border: 'none',
-    background: colors.primary,
-    color: colors.primaryText,
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  error: {
-    color: colors.danger,
-    fontSize: '0.9rem',
-    margin: 0,
-  },
 }
