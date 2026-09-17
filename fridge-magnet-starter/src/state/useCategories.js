@@ -59,6 +59,9 @@ export function useCategories(householdId) {
   }, [])
 
   const deleteCategory = useCallback(async (id) => {
+    // Removed locally right away rather than waiting on the realtime
+    // round-trip, so the tap feels instant on the phone that made it.
+    setCategories((current) => current.filter((category) => category.id !== id))
     const { error } = await supabase.from('categories').delete().eq('id', id)
     if (error) throw error
   }, [])
