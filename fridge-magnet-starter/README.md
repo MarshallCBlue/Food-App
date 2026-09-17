@@ -9,7 +9,8 @@ usage.
 
 ## Status
 
-Step 1 (accounts wired together) and Step 2 (database) are done.
+Steps 1–3 are done: accounts wired together, the database, and the app
+shell with sign-in.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -17,6 +18,13 @@ catalogue, the shopping list, inventory, a stock-event log, push
 subscriptions and sync runs — every one of them locked with Row Level
 Security so a household only ever sees its own rows. Creating a household
 seeds it with the standard aisles and storage locations automatically.
+
+Signing in works, first-time sign-up creates an account, and from there
+you either create a household (and get a six-character code to hand to
+whoever else should join) or join one with a code. Once you belong to a
+household you land on the three-tab shell — **List**, **Inventory**,
+**Scan** — though those tabs are still empty placeholders until the steps
+that fill them in.
 
 The shopping list, inventory, barcode scanner and NFC sync screens are
 built in the steps that follow — see the full build plan for the roadmap.

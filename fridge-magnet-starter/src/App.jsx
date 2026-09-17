@@ -1,73 +1,42 @@
-import { useEffect, useState } from 'react'
-import { supabase } from './supabaseClient'
+import { Route, Routes } from 'react-router-dom'
+import { useAuth } from './state/AuthProvider'
+import Screen from './components/Screen'
+import SignIn from './screens/SignIn'
+import HouseholdSetup from './screens/HouseholdSetup'
+import MainLayout from './components/MainLayout'
+import ShoppingListScreen from './screens/ShoppingListScreen'
+import InventoryScreen from './screens/InventoryScreen'
+import ScanScreen from './screens/ScanScreen'
 
-// This is a placeholder home screen. Its only job right now is to prove
-// that the app is live and that it can successfully reach the Fridge
-// Magnet Supabase project. The shopping list, inventory and NFC screens
-// arrive in later steps of the build.
+// The gate. Three questions, answered in order: is anyone signed in, do
+// they belong to a household, and only once both are yes does the real
+// app — the routed screens below — get to render at all.
 export default function App() {
-  // "connected" starts as null (meaning "still checking"), then becomes
-  // true or false once we hear back from Supabase.
-  const [connected, setConnected] = useState(null)
+  const { session, household } = useAuth()
 
-  useEffect(() => {
-    // getSession() asks Supabase "is anyone signed in right now?". We are
-    // not using the answer yet — we only care that Supabase replied at
-    // all, which tells us the connection details are correct.
-    supabase.auth
-      .getSession()
-      .then(() => setConnected(true))
-      .catch(() => setConnected(false))
-  }, [])
+  if (session === undefined || household === undefined) {
+    return (
+      <Screen>
+        <p>Loading…</p>
+      </Screen>
+    )
+  }
+
+  if (!session) {
+    return <SignIn />
+  }
+
+  if (!household) {
+    return <HouseholdSetup />
+  }
 
   return (
-    <main style={styles.page}>
-      <h1 style={styles.heading}>🧲 Fridge Magnet</h1>
-      <p style={styles.subheading}>Shopping list, inventory, and one tap on the fridge.</p>
-
-      <div style={styles.statusCard}>
-        {connected === null && <p>Checking connection to Supabase…</p>}
-        {connected === true && <p>✅ Connected to Supabase.</p>}
-        {connected === false && (
-          <p>
-            ⚠️ Could not reach Supabase. Check that VITE_SUPABASE_URL and
-            VITE_SUPABASE_ANON_KEY are set in Netlify's environment
-            variables.
-          </p>
-        )}
-      </div>
-    </main>
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<ShoppingListScreen />} />
+        <Route path="inventory" element={<InventoryScreen />} />
+        <Route path="scan" element={<ScanScreen />} />
+      </Route>
+    </Routes>
   )
-}
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.75rem',
-    padding: '1.5rem',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    textAlign: 'center',
-    color: '#1a2e22',
-    background: '#f4f8f5',
-  },
-  heading: {
-    fontSize: '2rem',
-    margin: 0,
-  },
-  subheading: {
-    margin: 0,
-    color: '#4a5f52',
-  },
-  statusCard: {
-    marginTop: '1rem',
-    padding: '0.9rem 1.2rem',
-    borderRadius: '0.75rem',
-    background: '#ffffff',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    maxWidth: '22rem',
-  },
 }
