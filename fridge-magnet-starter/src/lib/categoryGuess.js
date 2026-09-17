@@ -34,3 +34,12 @@ export function guessCategoryName(categoriesTags = []) {
   }
   return DEFAULT_CATEGORY
 }
+
+// The aisles worth asking a quick "use-by date?" for when scanning
+// something into the inventory — chilled and fresh goods, per the plan.
+// Everything else (tins, drinks, cleaning products…) stays out of the way.
+const PERISHABLE_CATEGORIES = new Set(['Dairy & Eggs', 'Meat & Fish', 'Chilled', 'Frozen', 'Fruit & Veg'])
+
+export function isPerishableCategory(categoryName) {
+  return PERISHABLE_CATEGORIES.has(categoryName)
+}

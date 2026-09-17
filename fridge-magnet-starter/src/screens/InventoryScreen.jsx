@@ -10,7 +10,9 @@ import { colors } from '../theme'
 export default function InventoryScreen() {
   const { household } = useAuth()
   const { locations } = useLocations(household.id)
-  const { rows, loading, searchItems, addToInventory, takeSome, clearAll } = useInventory(household.id)
+  const { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate } = useInventory(
+    household.id
+  )
   const [editingId, setEditingId] = useState(null)
   const [justEmptied, setJustEmptied] = useState(null)
 
@@ -37,9 +39,14 @@ export default function InventoryScreen() {
     <div style={{ paddingTop: '1rem' }}>
       <div style={styles.header}>
         <h2 style={styles.title}>Inventory</h2>
-        <Link to="/locations" style={styles.locationsLink}>
-          Edit locations
-        </Link>
+        <div style={styles.headerLinks}>
+          <Link to="/expiring" style={styles.locationsLink}>
+            Expiring
+          </Link>
+          <Link to="/locations" style={styles.locationsLink}>
+            Edit locations
+          </Link>
+        </div>
       </div>
 
       {justEmptied && (
@@ -75,6 +82,7 @@ export default function InventoryScreen() {
               onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
               onTakeSome={(amount) => handleTakeSome(row, amount)}
               onClearAll={() => handleClearAll(row)}
+              onSetExpiry={(date) => setExpiryDate(row.id, date)}
             />
           ))}
         </section>
@@ -118,6 +126,10 @@ const styles = {
   title: {
     margin: 0,
     fontSize: '1.2rem',
+  },
+  headerLinks: {
+    display: 'flex',
+    gap: '0.75rem',
   },
   locationsLink: {
     color: colors.primary,

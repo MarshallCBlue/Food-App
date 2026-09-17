@@ -8,6 +8,7 @@ import ShoppingListScreen from './screens/ShoppingListScreen'
 import AisleManagerScreen from './screens/AisleManagerScreen'
 import InventoryScreen from './screens/InventoryScreen'
 import LocationManagerScreen from './screens/LocationManagerScreen'
+import ExpiringScreen from './screens/ExpiringScreen'
 import ScanScreen from './screens/ScanScreen'
 import SyncScreen from './screens/SyncScreen'
 import HouseholdInfoScreen from './screens/HouseholdInfoScreen'
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="aisles" element={<AisleManagerScreen />} />
         <Route path="inventory" element={<InventoryScreen />} />
         <Route path="locations" element={<LocationManagerScreen />} />
+        <Route path="expiring" element={<ExpiringScreen />} />
         <Route path="scan" element={<ScanScreen />} />
         <Route path="sync" element={<SyncScreen />} />
         <Route path="household" element={<HouseholdInfoScreen />} />

@@ -1,13 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { colors } from '../theme'
 
-export default function InventoryRow({ row, editing, onOpen, onTakeSome, onClearAll }) {
+export default function InventoryRow({ row, editing, onOpen, onTakeSome, onClearAll, onSetExpiry }) {
   const [amount, setAmount] = useState('')
+  const [dateDraft, setDateDraft] = useState(row.expires_on || '')
+  const [dateError, setDateError] = useState(null)
+
+  // This row never remounts just because a realtime update changed its
+  // date, so the draft needs re-seeding from the row each time the panel
+  // opens — see the identical fix on ShoppingListRow.
+  useEffect(() => {
+    if (editing) {
+      setDateDraft(row.expires_on || '')
+      setDateError(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing])
 
   return (
     <div style={styles.row}>
       <button type="button" style={styles.rowButton} onClick={onOpen}>
-        <span style={styles.rowName}>{row.item.name}</span>
+        <span>
+          <span style={styles.rowName}>{row.item.name}</span>
+          {row.expires_on && <span style={styles.dateBadge}> · {formatDate(row.expires_on)}</span>}
+        </span>
         <span style={styles.rowQuantity}>{formatQuantity(row.quantity, row.unit)}</span>
       </button>
 
@@ -36,6 +52,32 @@ export default function InventoryRow({ row, editing, onOpen, onTakeSome, onClear
               Take off
             </button>
           </div>
+
+          <div style={styles.takeSomeRow}>
+            <input
+              style={styles.amountInput}
+              type="date"
+              value={dateDraft}
+              onChange={(event) => setDateDraft(event.target.value)}
+              aria-label="Use-by date"
+            />
+            <button
+              type="button"
+              style={styles.takeSomeButton}
+              onClick={async () => {
+                setDateError(null)
+                try {
+                  await onSetExpiry(dateDraft || null)
+                } catch (err) {
+                  setDateError(err.message)
+                }
+              }}
+            >
+              Save date
+            </button>
+          </div>
+          {dateError && <p style={styles.dateError}>{dateError}</p>}
+
           <button type="button" style={styles.clearButton} onClick={onClearAll}>
             All gone
           </button>
@@ -49,6 +91,10 @@ function formatQuantity(quantity, unit) {
   const number = Number(quantity)
   const display = Number.isInteger(number) ? number.toString() : number.toFixed(2).replace(/\.?0+$/, '')
   return unit ? `${display} ${unit}` : display
+}
+
+function formatDate(dateString) {
+  return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
 
 const styles = {
@@ -76,6 +122,15 @@ const styles = {
     color: colors.mutedText,
     fontSize: '0.9rem',
     whiteSpace: 'nowrap',
+  },
+  dateBadge: {
+    color: colors.mutedText,
+    fontSize: '0.85rem',
+  },
+  dateError: {
+    color: colors.danger,
+    fontSize: '0.85rem',
+    margin: 0,
   },
   editPanel: {
     marginTop: '0.5rem',

@@ -10,4 +10,5 @@ export const colors = {
   primaryText: '#ffffff',
   border: '#d7e2da',
   danger: '#b3261e',
+  warning: '#a3670a',
 }

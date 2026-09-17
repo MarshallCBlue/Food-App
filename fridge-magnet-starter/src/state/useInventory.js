@@ -13,7 +13,7 @@ export function useInventory(householdId) {
     const { data, error } = await supabase
       .from('inventory_items')
       .select(
-        'id, quantity, unit, item:items ( id, name ), location:locations ( id, name, display_order )'
+        'id, quantity, unit, expires_on, item:items ( id, name ), location:locations ( id, name, display_order )'
       )
       .eq('household_id', householdId)
 
@@ -75,7 +75,7 @@ export function useInventory(householdId) {
   )
 
   const addToInventory = useCallback(
-    async ({ itemId, name, locationId, quantity, unit }) => {
+    async ({ itemId, name, locationId, quantity, unit, expiresOn }) => {
       let resolvedItemId = itemId
 
       if (!resolvedItemId) {
@@ -98,17 +98,18 @@ export function useInventory(householdId) {
         }
       }
 
-      // Same item, same location, no use-by date yet (that's Step 8) —
-      // merge into the existing row rather than create a duplicate. The
-      // database's own unique index would refuse the duplicate anyway.
-      const { data: existingRow } = await supabase
+      // Same item, same location, same use-by date (including "no date"
+      // as its own bucket) — merge into the existing row rather than
+      // create a duplicate. The database's own unique index would refuse
+      // the duplicate anyway.
+      let matchQuery = supabase
         .from('inventory_items')
         .select('id')
         .eq('household_id', householdId)
         .eq('item_id', resolvedItemId)
         .eq('location_id', locationId)
-        .is('expires_on', null)
-        .maybeSingle()
+      matchQuery = expiresOn ? matchQuery.eq('expires_on', expiresOn) : matchQuery.is('expires_on', null)
+      const { data: existingRow } = await matchQuery.maybeSingle()
 
       if (existingRow) {
         // adjust_inventory_quantity does the addition inside Postgres and
@@ -131,6 +132,7 @@ export function useInventory(householdId) {
           location_id: locationId,
           quantity,
           unit: unit || null,
+          expires_on: expiresOn || null,
         })
         .select('id')
         .single()
@@ -146,6 +148,23 @@ export function useInventory(householdId) {
     },
     [householdId, findExistingItem]
   )
+
+  // Sets or changes a use-by date on a row already in the inventory — the
+  // plan calls it "an optional date field on any inventory item", not
+  // something only choosable at the moment it's added.
+  const setExpiryDate = useCallback(async (rowId, expiresOn) => {
+    const { error } = await supabase
+      .from('inventory_items')
+      .update({ expires_on: expiresOn || null })
+      .eq('id', rowId)
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('Another batch of this item already has that exact date in this location.')
+      }
+      throw error
+    }
+  }, [])
 
   // Takes a specific amount off. Returns true if that used the last of
   // it, so the screen can offer to add it back to the shopping list.
@@ -208,7 +227,7 @@ export function useInventory(householdId) {
     [householdId]
   )
 
-  return { rows, loading, searchItems, addToInventory, takeSome, clearAll }
+  return { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate }
 }
 
 // Used by the "add to shopping list?" prompt after an item runs out —

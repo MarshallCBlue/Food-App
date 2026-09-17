@@ -6,6 +6,7 @@ import { useShoppingList } from '../state/useShoppingList'
 import { useInventory } from '../state/useInventory'
 import { findItemByBarcode, createCatalogueItem } from '../state/catalogue'
 import { lookupBarcode } from '../lib/openFoodFacts'
+import { isPerishableCategory } from '../lib/categoryGuess'
 import BarcodeCamera from '../components/BarcodeCamera'
 import { colors } from '../theme'
 
@@ -142,8 +143,17 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
   const [locationId, setLocationId] = useState(isKnown ? resolved.item.default_location_id || '' : '')
   const [quantity, setQuantity] = useState('1')
   const [unit, setUnit] = useState(isKnown ? resolved.item.default_unit || '' : '')
+  const [expiresOn, setExpiresOn] = useState('')
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(null)
+
+  // Offered as a quick choice for chilled and fresh goods, and stays out
+  // of the way for tins — reacts live to whichever aisle is currently
+  // selected, known item or new.
+  const selectedCategoryName = isKnown
+    ? categories.find((category) => category.id === resolved.item.category_id)?.name
+    : categories.find((category) => category.id === categoryId)?.name
+  const showExpiryField = isPerishableCategory(selectedCategoryName)
 
   async function ensureItemId() {
     if (isKnown) return resolved.item.id
@@ -182,7 +192,14 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
     setSubmitting('inventory')
     try {
       const itemId = await ensureItemId()
-      await addToInventory({ itemId, name, locationId, quantity: Number(quantity) || 1, unit: unit.trim() })
+      await addToInventory({
+        itemId,
+        name,
+        locationId,
+        quantity: Number(quantity) || 1,
+        unit: unit.trim(),
+        expiresOn: expiresOn || null,
+      })
       onAdded(name)
     } catch (err) {
       setError(err.message)
@@ -245,6 +262,18 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
           onChange={(event) => setUnit(event.target.value)}
         />
       </div>
+
+      {showExpiryField && (
+        <label style={styles.dateLabel}>
+          Use-by date (optional)
+          <input
+            style={styles.input}
+            type="date"
+            value={expiresOn}
+            onChange={(event) => setExpiresOn(event.target.value)}
+          />
+        </label>
+      )}
 
       {error && <p style={styles.error}>{error}</p>}
 
@@ -322,6 +351,13 @@ const styles = {
   },
   unitInput: {
     flex: 1,
+  },
+  dateLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.3rem',
+    fontSize: '0.85rem',
+    color: colors.mutedText,
   },
   actionRow: {
     display: 'flex',

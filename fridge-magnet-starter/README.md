@@ -9,9 +9,9 @@ usage.
 
 ## Status
 
-Steps 1–7 are done: accounts wired together, the database, the app shell
-with sign-in, the shopping list, the inventory, the barcode scanner, and
-the NFC tag.
+Steps 1–8 are done: accounts wired together, the database, the app shell
+with sign-in, the shopping list, the inventory, the barcode scanner, the
+NFC tag, and use-by dates.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -75,7 +75,17 @@ app's own code, never anything from Supabase, so there's no risk of it
 serving stale shopping-list data — this app has no offline mode yet
 (that's still a possible later step), it's just properly installable.
 
-Step 8 (use-by dates) is next — see the full build plan for the roadmap.
+Any inventory item can now carry an optional use-by date — set it when
+adding manually, or scanning offers it as a quick choice for chilled and
+fresh goods specifically (dairy, meat, chilled, frozen, fruit & veg) and
+stays out of the way for tins; a date can also be added or changed later
+from a row's own panel. The new **Expiring** link (next to "Edit
+locations") groups everything within a week into Past their date / Next 3
+days / This week, oldest first — colour marks the urgency, but every row
+also says it in words ("2 days left"), so it still reads if you're
+colour-blind or the phone's in bright sun.
+
+Step 9 (reminders) is next — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 

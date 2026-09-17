@@ -12,6 +12,7 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
   const [locationId, setLocationId] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [unit, setUnit] = useState('')
+  const [expiresOn, setExpiresOn] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
@@ -54,12 +55,14 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
         locationId,
         quantity: Number(quantity) || 1,
         unit: unit.trim(),
+        expiresOn: expiresOn || null,
       })
       setName('')
       setSelectedItem(null)
       setQuantity('1')
       setUnit('')
       setLocationId('')
+      setExpiresOn('')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -117,6 +120,16 @@ export default function AddInventoryItemForm({ locations, searchItems, onAdd }) 
           onChange={(event) => setUnit(event.target.value)}
         />
       </div>
+
+      <label style={styles.dateLabel}>
+        Use-by date (optional)
+        <input
+          style={styles.input}
+          type="date"
+          value={expiresOn}
+          onChange={(event) => setExpiresOn(event.target.value)}
+        />
+      </label>
 
       {error && <p style={styles.error}>{error}</p>}
 
@@ -177,6 +190,13 @@ const styles = {
   },
   unitInput: {
     flex: 1,
+  },
+  dateLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.3rem',
+    fontSize: '0.85rem',
+    color: colors.mutedText,
   },
   addButton: {
     padding: '0.75rem',
