@@ -7,6 +7,7 @@ import MainLayout from './components/MainLayout'
 import ShoppingListScreen from './screens/ShoppingListScreen'
 import AisleManagerScreen from './screens/AisleManagerScreen'
 import InventoryScreen from './screens/InventoryScreen'
+import LocationManagerScreen from './screens/LocationManagerScreen'
 import ScanScreen from './screens/ScanScreen'
 
 // The gate. Three questions, answered in order: is anyone signed in, do
@@ -37,6 +38,7 @@ export default function App() {
         <Route index element={<ShoppingListScreen />} />
         <Route path="aisles" element={<AisleManagerScreen />} />
         <Route path="inventory" element={<InventoryScreen />} />
+        <Route path="locations" element={<LocationManagerScreen />} />
         <Route path="scan" element={<ScanScreen />} />
       </Route>
     </Routes>

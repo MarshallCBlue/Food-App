@@ -9,8 +9,8 @@ usage.
 
 ## Status
 
-Steps 1–4 are done: accounts wired together, the database, the app shell
-with sign-in, and the shopping list.
+Steps 1–5 are done: accounts wired together, the database, the app shell
+with sign-in, the shopping list, and the inventory.
 
 The database lives in `supabase/migrations/`. It has all ten tables from
 the build plan — households, membership, categories, locations, the item
@@ -32,8 +32,19 @@ quantity, unit or note, or remove it. Aisles themselves can be added,
 renamed, reordered and deleted from the "Edit aisles" link. Everything
 updates live on every phone in the household via Supabase Realtime.
 
-The inventory, barcode scanner and NFC sync screens are built in the
-steps that follow — see the full build plan for the roadmap.
+The inventory groups items under Cupboard/Drawer/Fridge/Freezer the same
+way, with a small "add to inventory" form for putting things in directly
+(the automatic routes — barcode scan and the NFC tap — arrive in Steps 6
+and 7). Each row can have a specific amount taken off, or be cleared in
+one tap; running out offers a one-tap "add to shopping list" instead of
+just vanishing. Every change is logged to `stock_events`, and the
+arithmetic behind "take some off" runs inside Postgres itself rather than
+in the browser, so repeated use can't drift a quantity away from its true
+value the way ordinary floating-point subtraction would. Locations can be
+added, renamed and deleted from the "Edit locations" link.
+
+The barcode scanner and NFC sync screens are built in the steps that
+follow — see the full build plan for the roadmap.
 
 ## Running this on your own computer (optional)
 
