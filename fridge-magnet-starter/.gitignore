@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local environment variables — this file holds real keys on your own
+# computer only. It must never be committed, because this repository is
+# public.
+.env
+.env.local
+
+# Editor and OS clutter
+.DS_Store
+.vscode/

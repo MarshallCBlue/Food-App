@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# This app decides what to show based on the web address (for example
+# "/sync" for the NFC tag, or "/inventory" for the inventory screen), rather
+# than Netlify having a real file at each of those addresses. Without the
+# rule below, tapping the NFC tag would land on Netlify's "page not found"
+# screen, because no file called "sync" actually exists — the rule tells
+# Netlify to hand every address to index.html and let the app itself work
+# out what to display.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
