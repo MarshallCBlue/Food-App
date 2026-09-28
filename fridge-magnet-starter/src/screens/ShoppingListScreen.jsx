@@ -58,7 +58,7 @@ export default function ShoppingListScreen() {
       {groups.map((group) => {
         const left = group.items.filter((row) => !row.checked).length
         return (
-          <section key={group.name} className="fm-group">
+          <section key={group.name} className="fm-group fm-group--tight">
             <div className="fm-rail">
               <h2 className="fm-rail__name">{group.name}</h2>
               <span className="fm-rail__count">{left === 0 ? 'all done' : `${left} left`}</span>

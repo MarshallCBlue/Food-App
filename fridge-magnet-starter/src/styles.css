@@ -406,6 +406,12 @@ a {
   margin-bottom: var(--fm-space-5);
 }
 
+/* The shopping list has many short aisles in a row, so they sit a little
+   closer together than groups elsewhere (1rem instead of 1.5rem) */
+.fm-group--tight {
+  margin-bottom: var(--fm-space-4);
+}
+
 .fm-rail {
   position: sticky;
   top: var(--fm-header-h);
