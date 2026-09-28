@@ -62,7 +62,7 @@ export function useShoppingList(householdId) {
       if (!query.trim()) return []
       const { data, error } = await supabase
         .from('items')
-        .select('id, name, default_unit, categories ( name )')
+        .select('id, name, default_unit, category_id, categories ( name )')
         .eq('household_id', householdId)
         .ilike('name_key', `%${query.trim().toLowerCase()}%`)
         .order('name')
@@ -77,6 +77,22 @@ export function useShoppingList(householdId) {
     [householdId]
   )
 
+  // Changing the aisle changes the catalogue item, not just this list
+  // line — so the item is filed under the new aisle every time it is
+  // added from now on. The list reloads straight away, because the
+  // live-update feed only watches shopping list lines, not items.
+  const setItemAisle = useCallback(
+    async (itemId, categoryId) => {
+      const { error } = await supabase
+        .from('items')
+        .update({ category_id: categoryId || null })
+        .eq('id', itemId)
+      if (error) throw error
+      await load()
+    },
+    [load]
+  )
+
   // confirmUnits is the pop-up from useUnitConfirm — it is only used when
   // the item is already on the list in a different unit.
   const addToList = useCallback(
@@ -87,6 +103,7 @@ export function useShoppingList(householdId) {
         const existing = await findExistingItem(name)
         if (existing) {
           resolvedItemId = existing.id
+          if (categoryId && existing.category_id !== categoryId) await setItemAisle(existing.id, categoryId)
         } else {
           const { data: newItem, error: itemError } = await supabase
             .from('items')
@@ -103,13 +120,17 @@ export function useShoppingList(householdId) {
         }
       }
 
+      // A known item picked from the suggestions, with an aisle chosen:
+      // remember the aisle on the item itself, so it sticks next time.
+      if (itemId && categoryId) await setItemAisle(itemId, categoryId)
+
       return addOrMergeShoppingItem(
         householdId,
         { itemId: resolvedItemId, quantity, unit, note },
         confirmUnits
       )
     },
-    [householdId, findExistingItem]
+    [householdId, findExistingItem, setItemAisle]
   )
 
   const toggleChecked = useCallback(async (id, checked) => {
@@ -130,5 +151,5 @@ export function useShoppingList(householdId) {
     if (error) throw error
   }, [])
 
-  return { rows, loading, searchItems, addToList, toggleChecked, updateRow, removeRow }
+  return { rows, loading, searchItems, addToList, setItemAisle, toggleChecked, updateRow, removeRow }
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import Icon from './Icon'
 
-export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave, onRemove }) {
+export default function ShoppingListRow({ row, categories, editing, onToggle, onOpen, onSave, onRemove }) {
   const [quantity, setQuantity] = useState(row.quantity)
   const [unit, setUnit] = useState(row.unit || '')
   const [note, setNote] = useState(row.note || '')
+  const [categoryId, setCategoryId] = useState(row.item.category?.id || '')
 
   // Rows never remount (same row id, same key) even when a realtime
   // update changes their data, so the edit fields need to be re-seeded
@@ -15,6 +16,7 @@ export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave
       setQuantity(row.quantity)
       setUnit(row.unit || '')
       setNote(row.note || '')
+      setCategoryId(row.item.category?.id || '')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing])
@@ -68,12 +70,29 @@ export default function ShoppingListRow({ row, editing, onToggle, onOpen, onSave
             onChange={(event) => setNote(event.target.value)}
             aria-label="Note"
           />
+          {/* Changing this moves the item for good, not just this line */}
+          <select
+            className="fm-field"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            aria-label="Aisle"
+          >
+            <option value="">Other (no aisle)</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
           <div className="fm-inline">
             <button
               type="button"
               className="fm-btn fm-btn--block"
               onClick={() =>
-                onSave({ quantity: Number(quantity) || 1, unit: unit.trim() || null, note: note.trim() || null })
+                onSave(
+                  { quantity: Number(quantity) || 1, unit: unit.trim() || null, note: note.trim() || null },
+                  categoryId
+                )
               }
             >
               Save changes

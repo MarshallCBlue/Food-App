@@ -15,7 +15,7 @@ export default function ShoppingListScreen() {
   const { household } = useAuth()
   const navigate = useNavigate()
   const { categories } = useCategories(household.id)
-  const { rows, loading, searchItems, addToList, toggleChecked, updateRow, removeRow } = useShoppingList(
+  const { rows, loading, searchItems, addToList, setItemAisle, toggleChecked, updateRow, removeRow } = useShoppingList(
     household.id
   )
   const [editingId, setEditingId] = useState(null)
@@ -67,11 +67,15 @@ export default function ShoppingListScreen() {
               <ShoppingListRow
                 key={row.id}
                 row={row}
+                categories={categories}
                 editing={editingId === row.id}
                 onToggle={() => toggleChecked(row.id, !row.checked)}
                 onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
-                onSave={(fields) => {
+                onSave={(fields, categoryId) => {
                   updateRow(row.id, fields)
+                  if ((categoryId || null) !== (row.item.category?.id || null)) {
+                    setItemAisle(row.item.id, categoryId)
+                  }
                   setEditingId(null)
                 }}
                 onRemove={() => {

@@ -67,7 +67,7 @@ export default function AdminScreen() {
 
   return (
     <div>
-      <PageHeader title="Admin" subtitle="Every household and account" />
+      <PageHeader backTo="/household" title="Admin" subtitle="Every household and account" />
 
       {error && (
         <p className="fm-error" style={{ marginBottom: '1rem' }}>

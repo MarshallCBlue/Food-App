@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 
 // Typing "tahini" shows a suggestion if you've bought it before — pick it
-// and its aisle comes along for free. Type something new and you're asked
-// which aisle it lives in, just once, ever.
+// and its aisle comes along for free, already selected in the aisle box.
+// Change the aisle there and the item remembers the new one from then on.
+// Type something new and you're asked which aisle it lives in.
 //
 // Only the name box is shown until you start typing. The quantity, unit
 // and note appear underneath once there is something to attach them to,
@@ -35,12 +36,16 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
     setSelectedItem(item)
     setName(item.name)
     setUnit(item.default_unit || '')
+    setCategoryId(item.category_id || '')
     setSuggestions([])
   }
 
   function handleNameChange(value) {
     setName(value)
-    if (selectedItem) setSelectedItem(null)
+    if (selectedItem) {
+      setSelectedItem(null)
+      setCategoryId('')
+    }
   }
 
   async function handleSubmit(event) {
@@ -56,7 +61,9 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
       const result = await onAdd({
         itemId: selectedItem?.id ?? null,
         name,
-        categoryId: selectedItem ? null : categoryId,
+        // Sent for known items too: if it differs from the item's saved
+        // aisle, the item is moved and remembers it.
+        categoryId: categoryId || null,
         quantity: Number(quantity) || 1,
         unit: unit.trim(),
         note: note.trim(),
@@ -102,21 +109,19 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
 
       {expanded && (
         <>
-          {!selectedItem && (
-            <select
-              className="fm-field"
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              aria-label="Aisle"
-            >
-              <option value="">Which aisle?</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            className="fm-field"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            aria-label="Aisle"
+          >
+            <option value="">{selectedItem ? 'No aisle yet' : 'Which aisle?'}</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
 
           <div className="fm-inline">
             <input

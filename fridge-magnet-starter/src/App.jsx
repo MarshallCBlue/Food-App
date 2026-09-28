@@ -16,6 +16,7 @@ import RecipesScreen from './screens/RecipesScreen'
 import RecipeFormScreen from './screens/RecipeFormScreen'
 import CookRecipeScreen from './screens/CookRecipeScreen'
 import AdminScreen from './screens/AdminScreen'
+import MealPlannerScreen from './screens/MealPlannerScreen'
 
 // The gate. Three questions, answered in order: is anyone signed in, do
 // they belong to a household, and only once both are yes does the real
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="recipes/new" element={<RecipeFormScreen />} />
         <Route path="recipes/:recipeId/edit" element={<RecipeFormScreen />} />
         <Route path="recipes/:recipeId/cook" element={<CookRecipeScreen />} />
+        <Route path="planner" element={<MealPlannerScreen />} />
         <Route path="admin" element={<AdminScreen />} />
       </Route>
     </Routes>

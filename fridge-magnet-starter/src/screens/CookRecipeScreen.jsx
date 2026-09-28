@@ -284,6 +284,16 @@ export default function CookRecipeScreen() {
         Takes these ingredients out of your inventory.
       </p>
 
+      <button
+        type="button"
+        className="fm-btn fm-btn--secondary fm-btn--block"
+        style={{ marginTop: 'var(--fm-space-3)' }}
+        onClick={() => navigate(`/planner?recipe=${recipe.id}`)}
+      >
+        <Icon name="calendar" />
+        Add to meal plan
+      </button>
+
       {steps.length > 0 && (
         <section className="fm-group fm-group--after-action">
           <div className="fm-rail">

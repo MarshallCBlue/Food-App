@@ -1357,3 +1357,81 @@ select.fm-field {
   color: var(--fm-muted);
   font-weight: 600;
 }
+
+/* ── Meal planner ─────────────────────────────────────────────────── */
+/* Square chips for the previous/next week arrows */
+.fm-chip--icon {
+  justify-content: center;
+  min-width: 34px;
+  padding: 0;
+}
+
+.fm-chip--icon svg {
+  color: var(--fm-ink);
+}
+
+/* Today's rail is drawn in the brand green, so it is easy to find */
+.fm-rail--today {
+  border-bottom-color: var(--fm-brand);
+}
+
+.fm-rail--today .fm-rail__name {
+  color: var(--fm-brand);
+}
+
+/* The small "+ Add" on the right of each day's rail. Tall enough to hit
+   with a thumb, but drawn small so it doesn't shout. */
+.fm-rail__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 32px;
+  margin: -0.4rem -0.35rem -0.3rem 0;
+  padding: 0 0.35rem;
+  border: 0;
+  background: none;
+  color: var(--fm-brand);
+  font-size: var(--fm-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fm-day-empty {
+  padding: var(--fm-space-2) 0;
+  color: var(--fm-muted);
+  font-size: var(--fm-text-sm);
+}
+
+.fm-row__hint {
+  flex-shrink: 0;
+  color: var(--fm-faint);
+}
+
+/* A recipe's ingredients, each with a tick box, inside a row's panel */
+.fm-checklist {
+  display: flex;
+  flex-direction: column;
+}
+
+.fm-checklist__item {
+  display: flex;
+  align-items: center;
+  gap: var(--fm-space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.fm-checklist__name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Pushes a lone button (the bin on a typed meal) to the right */
+.fm-push-end {
+  margin-left: auto;
+}
+
+.fm-note svg {
+  vertical-align: -2px;
+}
