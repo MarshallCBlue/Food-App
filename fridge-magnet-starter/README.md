@@ -130,8 +130,8 @@ for the roadmap.
   refuses to show or change another household's rows, and refuses any row
   that points at another household's item, aisle, shelf or recipe.
 - **Admins** can see and change everything. The first admin was the
-  member of "87 Sapley". Settings → Admin lists every household and
-  account: open a household to edit its list, inventory or recipes with
+  member of "87 Sapley", and every new account starts as a normal user.
+  Admins get a fifth **Admin** tab listing every household and account: open a household to edit its list, inventory or recipes with
   the normal screens (the header turns red while you're in someone
   else's), remove members, delete a household, delete an account, or make
   someone else an admin.

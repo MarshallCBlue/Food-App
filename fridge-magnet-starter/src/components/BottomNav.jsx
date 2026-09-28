@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../state/AuthProvider'
 import Icon from './Icon'
 
 // The four places you can be. Recipes used to be a small text link at the
@@ -11,10 +12,19 @@ const tabs = [
   { to: '/scan', label: 'Scan', icon: 'scan' },
 ]
 
+// Admins get a fifth tab, for the same reason recipes got one: a panel
+// tucked away behind the settings cog is too easy to never find. Everyone
+// else never sees it — and the database refuses them even if they type
+// the address in by hand.
+const adminTab = { to: '/admin', label: 'Admin', icon: 'shield' }
+
 export default function BottomNav() {
+  const { isAdmin } = useAuth()
+  const visibleTabs = isAdmin ? [...tabs, adminTab] : tabs
+
   return (
     <nav className="fm-nav" aria-label="Main">
-      {tabs.map((tab) => (
+      {visibleTabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}

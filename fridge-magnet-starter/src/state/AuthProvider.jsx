@@ -18,7 +18,9 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined)
   const [ownHousehold, setHousehold] = useState(undefined)
-  const [isAdmin, setIsAdmin] = useState(false)
+  // null while still asking, so the admin screen can wait for the answer
+  // instead of treating "not heard back yet" as "no".
+  const [isAdmin, setIsAdmin] = useState(null)
   const [viewingHousehold, setViewingHousehold] = useState(null)
 
   const loadHousehold = useCallback(async (userId) => {
@@ -57,6 +59,7 @@ export function AuthProvider({ children }) {
       loadedUserId.current = userId
 
       setViewingHousehold(null)
+      setIsAdmin(null)
       if (current) {
         loadHousehold(current.user.id)
         loadIsAdmin()
