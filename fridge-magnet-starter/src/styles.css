@@ -305,10 +305,19 @@ a {
 /* ── Page headings ────────────────────────────────────────────────── */
 .fm-page-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--fm-space-3);
   margin-bottom: var(--fm-space-4);
+}
+
+/* The title side takes whatever room the buttons leave. On a very narrow
+   phone, where the title would be squeezed below 7rem, the buttons drop
+   underneath it as one row rather than stacking on top of each other. */
+.fm-page-head > :first-child {
+  flex: 1 1 7rem;
+  min-width: 0;
 }
 
 .fm-page-title {
@@ -348,7 +357,8 @@ a {
 /* Secondary destinations for a screen — small, out of the way */
 .fm-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: var(--fm-space-2);
 }
 
@@ -360,6 +370,7 @@ a {
   padding: 0 0.7rem;
   border: 1px solid var(--fm-line-strong);
   border-radius: var(--fm-radius-pill);
+  white-space: nowrap;
   background: var(--fm-slip);
   color: var(--fm-ink);
   font-size: var(--fm-text-sm);
@@ -460,6 +471,9 @@ a {
 /* The whole row is the button, so it is impossible to miss with a thumb */
 .fm-row__button {
   flex: 1;
+  /* Lets the row shrink to the screen instead of being pushed wider by a
+     long name or email address */
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -490,6 +504,7 @@ a {
 .fm-row__meta {
   display: block;
   margin-top: 1px;
+  overflow-wrap: anywhere;
   color: var(--fm-muted);
   font-size: var(--fm-text-sm);
 }
@@ -1280,4 +1295,59 @@ select.fm-field {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ── Recipes: photo and method ───────────────────────────────────── */
+.fm-field--textarea {
+  min-height: 8rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.fm-btn.is-busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* The photo on the recipe form, with its change/remove buttons */
+.fm-recipe-photo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-2);
+}
+
+.fm-recipe-photo img,
+.fm-recipe-hero {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: var(--fm-radius-lg);
+  background: var(--fm-sunk);
+}
+
+/* The photo at the top of a recipe's page sits the same distance above
+   the first rail as the add-item box does on the other tabs */
+.fm-recipe-hero {
+  margin-bottom: var(--fm-space-5);
+}
+
+.fm-group--after-action {
+  margin-top: var(--fm-space-5);
+}
+
+/* Numbered method steps, readable at arm's length */
+.fm-steps {
+  list-style: decimal;
+  padding: var(--fm-space-3) 0 0 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fm-space-3);
+  font-size: var(--fm-text-base);
+  line-height: 1.5;
+}
+
+.fm-steps li::marker {
+  color: var(--fm-muted);
+  font-weight: 600;
 }

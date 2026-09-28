@@ -10,6 +10,7 @@ import { isPerishableCategory } from '../lib/categoryGuess'
 import BarcodeCamera from '../components/BarcodeCamera'
 import PageHeader from '../components/PageHeader'
 import Icon from '../components/Icon'
+import { useUnitConfirm } from '../components/UnitConfirmDialog'
 
 export default function ScanScreen() {
   const { household } = useAuth()
@@ -17,6 +18,7 @@ export default function ScanScreen() {
   const { locations } = useLocations(household.id)
   const { addToList } = useShoppingList(household.id)
   const { addToInventory } = useInventory(household.id)
+  const [confirmUnits, unitDialog] = useUnitConfirm()
 
   const [stage, setStage] = useState('scanning') // scanning | manual | looking-up | result | added
   const [manualCode, setManualCode] = useState('')
@@ -85,12 +87,13 @@ export default function ScanScreen() {
 
   if (stage === 'result' && resolved) {
     return (
+      <>
       <ScanResultForm
         resolved={resolved}
         categories={categories}
         locations={locations}
         householdId={household.id}
-        addToList={addToList}
+        addToList={(fields) => addToList(fields, confirmUnits)}
         addToInventory={addToInventory}
         onCancel={reset}
         onAdded={(name) => {
@@ -98,6 +101,8 @@ export default function ScanScreen() {
           setStage('added')
         }}
       />
+      {unitDialog}
+      </>
     )
   }
 
@@ -204,7 +209,8 @@ function ScanResultForm({ resolved, categories, locations, householdId, addToLis
     setSubmitting('list')
     try {
       const itemId = await ensureItemId()
-      await addToList({ itemId, name, quantity: Number(quantity) || 1, unit: unit.trim(), note: '' })
+      const result = await addToList({ itemId, name, quantity: Number(quantity) || 1, unit: unit.trim(), note: '' })
+      if (result === 'cancelled') return
       onAdded(name)
     } catch (err) {
       setError(err.message)

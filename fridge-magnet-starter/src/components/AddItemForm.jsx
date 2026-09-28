@@ -53,7 +53,7 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
     setError(null)
     setSubmitting(true)
     try {
-      await onAdd({
+      const result = await onAdd({
         itemId: selectedItem?.id ?? null,
         name,
         categoryId: selectedItem ? null : categoryId,
@@ -61,6 +61,8 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
         unit: unit.trim(),
         note: note.trim(),
       })
+      // Cancelled from the "different units" pop-up: keep what was typed.
+      if (result === 'cancelled') return
       setName('')
       setSelectedItem(null)
       setQuantity('1')

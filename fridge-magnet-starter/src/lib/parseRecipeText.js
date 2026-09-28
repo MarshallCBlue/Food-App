@@ -75,5 +75,21 @@ export function parseRecipeText(text) {
     if (ingredient.name) ingredients.push(ingredient)
   }
 
-  return { name: titleLine || '', ingredients }
+  return { name: titleLine || '', ingredients, instructions: findInstructions(lines) }
+}
+
+// The method: every line after an "Instructions" / "Method" / "Steps"
+// heading, stopping at the usual clutter found under it on recipe pages.
+const METHOD_HEADING = /^(instructions|method|directions|steps)\b/i
+const METHOD_END = /^(notes?|nutrition|save|share|print)\b/i
+
+function findInstructions(lines) {
+  const start = lines.findIndex((line) => METHOD_HEADING.test(line) && line.length < 25)
+  if (start === -1) return ''
+  const steps = []
+  for (const line of lines.slice(start + 1)) {
+    if (METHOD_END.test(line)) break
+    steps.push(line)
+  }
+  return steps.join('\n')
 }

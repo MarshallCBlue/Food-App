@@ -7,6 +7,8 @@ import { addItemToShoppingList } from '../state/useInventory'
 import PageHeader from '../components/PageHeader'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { useUnitConfirm } from '../components/UnitConfirmDialog'
+import { recipeImageUrl } from '../lib/recipeImages'
 
 // Shows what a recipe needs against what's actually in the inventory
 // before touching anything, cooks it (Postgres does the real
@@ -26,6 +28,7 @@ export default function CookRecipeScreen() {
   const [selectedShort, setSelectedShort] = useState({})
   const [actionError, setActionError] = useState(null)
   const [addingToList, setAddingToList] = useState(false)
+  const [confirmUnits, unitDialog] = useUnitConfirm()
 
   useEffect(() => {
     let cancelled = false
@@ -82,7 +85,9 @@ export default function CookRecipeScreen() {
     try {
       const toAdd = result.short.filter((item) => selectedShort[item.item_id])
       for (const item of toAdd) {
-        await addItemToShoppingList(household.id, item.item_id, item.unit)
+        // The amount you were short of, not just 1 — so it adds up
+        // properly with anything already on the list.
+        await addItemToShoppingList(household.id, item.item_id, item.unit, item.quantity, confirmUnits)
       }
       navigate('/')
     } catch (err) {
@@ -197,11 +202,19 @@ export default function CookRecipeScreen() {
             Done
           </button>
         )}
+
+        {unitDialog}
       </div>
     )
   }
 
   // Before cooking: needed against what is actually in the cupboards.
+  // The method is saved as one step per line; any "1." or "Step 2:" typed
+  // in front is dropped, because the list numbers the steps itself.
+  const steps = (recipe.instructions || '')
+    .split('\n')
+    .map((line) => line.replace(/^\s*(step\s*\d+[.):]?|\d+[.)])\s*/i, '').trim())
+    .filter(Boolean)
   const shortCount = recipe.recipe_ingredients.filter(
     (ri) => (availability[ri.item.id] || 0) < ri.quantity
   ).length
@@ -217,6 +230,10 @@ export default function CookRecipeScreen() {
             : `Short of ${shortCount} ingredient${shortCount === 1 ? '' : 's'}`
         }
       />
+
+      {recipe.image_path && (
+        <img className="fm-recipe-hero" src={recipeImageUrl(recipe.image_path)} alt={`Photo of ${recipe.name}`} />
+      )}
 
       <section className="fm-group">
         <div className="fm-rail">
@@ -266,6 +283,22 @@ export default function CookRecipeScreen() {
       <p className="fm-note" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
         Takes these ingredients out of your inventory.
       </p>
+
+      {steps.length > 0 && (
+        <section className="fm-group fm-group--after-action">
+          <div className="fm-rail">
+            <h2 className="fm-rail__name">Method</h2>
+            <span className="fm-rail__count">
+              {steps.length} step{steps.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <ol className="fm-steps">
+            {steps.map((step, index) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   )
 }

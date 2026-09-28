@@ -107,9 +107,11 @@ export default function AdminScreen() {
                         ? 'No members'
                         : row.members.map((member) => member.email).join(', ')}
                     </span>
-                  </span>
-                  <span className="fm-row__qty">
-                    {row.shopping_list_count} list · {row.inventory_count} stock · {row.recipe_count} recipes
+                    {/* On its own line under the emails, rather than squeezed
+                        in on the right where it pushed the page off-screen */}
+                    <span className="fm-row__meta">
+                      {row.shopping_list_count} list · {row.inventory_count} stock · {row.recipe_count} recipes
+                    </span>
                   </span>
                 </button>
               </div>
@@ -118,7 +120,7 @@ export default function AdminScreen() {
                 <div className="fm-row__panel">
                   {row.members.map((member) => (
                     <div className="fm-inline" key={member.user_id} style={{ alignItems: 'center' }}>
-                      <span className="fm-row__meta" style={{ flex: 1 }}>
+                      <span className="fm-row__meta" style={{ flex: 1, minWidth: 0 }}>
                         {member.email}
                       </span>
                       <button

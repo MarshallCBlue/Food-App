@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { guessAisleId } from '../lib/shoppingList'
+import { deleteRecipeImage } from '../lib/recipeImages'
 
 // Recipes and their ingredients — each ingredient is tied to the same
 // catalogue item used everywhere else, so "Flour" in a recipe is the
@@ -12,7 +14,7 @@ export function useRecipes(householdId) {
     if (!householdId) return
     const { data, error } = await supabase
       .from('recipes')
-      .select('id, name, recipe_ingredients ( id )')
+      .select('id, name, image_path, recipe_ingredients ( id )')
       .eq('household_id', householdId)
       .order('name')
 
@@ -83,9 +85,13 @@ export function useRecipes(householdId) {
     const existing = await findExistingItem(ingredient.name)
     if (existing) return existing.id
 
+    // A brand-new ingredient gets an aisle guessed from its name, so it
+    // lands in the right group on the shopping list instead of "Other".
+    // The unit is included so "2 tins tomatoes" counts as a cupboard tin.
+    const categoryId = await guessAisleId(householdId, `${ingredient.unit || ''} ${ingredient.name}`, 'Food Cupboard')
     const { data: newItem, error } = await supabase
       .from('items')
-      .insert({ household_id: householdId, name: ingredient.name.trim() })
+      .insert({ household_id: householdId, name: ingredient.name.trim(), category_id: categoryId })
       .select('id')
       .single()
     if (error) throw error
@@ -110,11 +116,17 @@ export function useRecipes(householdId) {
     }
   }
 
+  // details = { instructions, imagePath } — both optional.
   const createRecipe = useCallback(
-    async (name, ingredients) => {
+    async (name, ingredients, details = {}) => {
       const { data: recipe, error } = await supabase
         .from('recipes')
-        .insert({ household_id: householdId, name: name.trim() })
+        .insert({
+          household_id: householdId,
+          name: name.trim(),
+          instructions: details.instructions?.trim() || null,
+          image_path: details.imagePath || null,
+        })
         .select('id')
         .single()
       if (error) throw error
@@ -129,8 +141,15 @@ export function useRecipes(householdId) {
   // short lists, and re-resolving/re-inserting the lot is simpler and
   // just as correct as tracking which rows changed.
   const updateRecipe = useCallback(
-    async (recipeId, name, ingredients) => {
-      const { error: renameError } = await supabase.from('recipes').update({ name: name.trim() }).eq('id', recipeId)
+    async (recipeId, name, ingredients, details = {}) => {
+      const { error: renameError } = await supabase
+        .from('recipes')
+        .update({
+          name: name.trim(),
+          instructions: details.instructions?.trim() || null,
+          image_path: details.imagePath || null,
+        })
+        .eq('id', recipeId)
       if (renameError) throw renameError
 
       const { error: deleteError } = await supabase.from('recipe_ingredients').delete().eq('recipe_id', recipeId)
@@ -141,16 +160,24 @@ export function useRecipes(householdId) {
     [householdId]
   )
 
-  const deleteRecipe = useCallback(async (recipeId) => {
-    setRecipes((current) => current.filter((recipe) => recipe.id !== recipeId))
-    const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
-    if (error) throw error
-  }, [])
+  const deleteRecipe = useCallback(
+    async (recipeId) => {
+      const imagePath = recipes.find((recipe) => recipe.id === recipeId)?.image_path
+      setRecipes((current) => current.filter((recipe) => recipe.id !== recipeId))
+      const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
+      if (error) throw error
+      // The photo goes too, so storage doesn't fill up with orphans.
+      await deleteRecipeImage(imagePath)
+    },
+    [recipes]
+  )
 
   const loadRecipeWithIngredients = useCallback(async (recipeId) => {
     const { data, error } = await supabase
       .from('recipes')
-      .select('id, name, recipe_ingredients ( id, quantity, unit, item:items ( id, name ) )')
+      .select(
+        'id, name, instructions, image_path, recipe_ingredients ( id, quantity, unit, item:items ( id, name ) )'
+      )
       .eq('id', recipeId)
       .single()
     if (error) throw error

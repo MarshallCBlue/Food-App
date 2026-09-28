@@ -43,3 +43,88 @@ const PERISHABLE_CATEGORIES = new Set(['Dairy & Eggs', 'Meat & Fish', 'Chilled',
 export function isPerishableCategory(categoryName) {
   return PERISHABLE_CATEGORIES.has(categoryName)
 }
+
+// ── Guessing an aisle from a plain name ─────────────────────────────
+// Recipe ingredients and quick adds arrive as just a name ("red onion",
+// "chicken thighs"), with no Open Food Facts tags to go on. These rules
+// match whole words only, so "butternut squash" is not mistaken for
+// butter and "eggplant" is not mistaken for egg. Plurals ("onions",
+// "tomatoes") count as a match too.
+//
+// Order matters: the first aisle with a matching word wins, so the more
+// specific aisles come first (frozen peas are Frozen, not Fruit & Veg).
+// The aisle names must match the ones on the Aisles screen; any that you
+// have renamed or deleted are simply skipped.
+const NAME_RULES = [
+  { category: 'Frozen', keywords: ['frozen', 'ice cream', 'ice lolly'] },
+  { category: 'Chilled', keywords: ['hummus', 'houmous', 'pesto', 'tofu', 'fresh pasta', 'ready meal'] },
+  // Before Fruit & Veg and Dairy so "tinned tomatoes", "ground ginger" and
+  // "peanut butter" land in the cupboard, not the fresh aisles.
+  {
+    category: 'Food Cupboard',
+    keywords: [
+      'tin', 'tinned', 'can', 'canned', 'jar', 'dried', 'ground', 'powder', 'stock', 'stock cube', 'flour',
+      'rice', 'pasta', 'noodle', 'sugar', 'oil', 'vinegar', 'salt', 'spice', 'sauce', 'paste', 'peanut butter',
+      'coconut milk', 'lentil', 'chickpea', 'oat', 'cereal', 'honey', 'jam', 'baking powder', 'yeast', 'flake',
+    ],
+  },
+  {
+    category: 'Fruit & Veg',
+    keywords: [
+      'fruit', 'vegetable', 'veg', 'salad', 'potato', 'onion', 'spring onion', 'shallot', 'garlic', 'ginger',
+      'carrot', 'parsnip', 'leek', 'celery', 'tomato', 'cucumber', 'lettuce', 'spinach', 'kale', 'cabbage',
+      'broccoli', 'cauliflower', 'courgette', 'aubergine', 'pepper', 'chilli', 'chili', 'mushroom', 'pea',
+      'bean sprout', 'sweetcorn', 'squash', 'pumpkin', 'avocado', 'lemon', 'lime', 'orange', 'apple', 'pear',
+      'banana', 'grape', 'berry', 'strawberry', 'raspberry', 'blueberry', 'melon', 'mango', 'pineapple',
+      'coriander', 'parsley', 'basil', 'mint', 'rosemary', 'thyme', 'herb', 'rocket', 'beetroot', 'asparagus',
+    ],
+  },
+  {
+    category: 'Meat & Fish',
+    keywords: [
+      'meat', 'chicken', 'beef', 'pork', 'lamb', 'mince', 'steak', 'sausage', 'bacon', 'ham', 'chorizo',
+      'turkey', 'duck', 'fish', 'salmon', 'cod', 'haddock', 'tuna', 'prawn', 'mackerel', 'seafood',
+    ],
+  },
+  {
+    category: 'Dairy & Eggs',
+    keywords: [
+      'milk', 'cheese', 'cheddar', 'mozzarella', 'parmesan', 'feta', 'halloumi', 'yogurt', 'yoghurt', 'butter',
+      'cream', 'creme fraiche', 'egg',
+    ],
+  },
+  { category: 'Bakery', keywords: ['bread', 'loaf', 'baguette', 'bun', 'roll', 'wrap', 'tortilla', 'pitta', 'naan', 'croissant', 'bagel'] },
+  { category: 'Drinks', keywords: ['juice', 'water', 'tea', 'coffee', 'wine', 'beer', 'cola'] },
+  { category: 'Household', keywords: ['foil', 'cling film', 'bin bag', 'washing up liquid', 'detergent', 'kitchen roll'] },
+]
+
+// Plurals: "onions", "tomatoes", "berries" all reduce to their keyword.
+function matchesWord(word, keyword) {
+  return (
+    word === keyword ||
+    word === `${keyword}s` ||
+    word === `${keyword}es` ||
+    (keyword.endsWith('y') && word === `${keyword.slice(0, -1)}ies`)
+  )
+}
+
+// Returns an aisle name, or null when nothing matches. Unlike the barcode
+// guess above there is no Food Cupboard fallback here — "flour" and
+// "rice" really do belong there, but so would every typo, so the caller
+// decides what an unmatched name should do.
+export function guessCategoryFromName(name = '') {
+  const clean = name.toLowerCase().replace(/[^a-z\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!clean) return null
+  const words = clean.split(' ')
+  const padded = ` ${clean} `
+
+  for (const { category, keywords } of NAME_RULES) {
+    for (const keyword of keywords) {
+      const found = keyword.includes(' ')
+        ? padded.includes(` ${keyword} `) || padded.includes(` ${keyword}s `)
+        : words.some((word) => matchesWord(word, keyword))
+      if (found) return category
+    }
+  }
+  return null
+}

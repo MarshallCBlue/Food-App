@@ -9,6 +9,7 @@ import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { useUnitConfirm } from '../components/UnitConfirmDialog'
 
 export default function ShoppingListScreen() {
   const { household } = useAuth()
@@ -18,6 +19,7 @@ export default function ShoppingListScreen() {
     household.id
   )
   const [editingId, setEditingId] = useState(null)
+  const [confirmUnits, unitDialog] = useUnitConfirm()
 
   const groups = useMemo(() => groupByAisle(rows), [rows])
   const ticked = rows.filter((row) => row.checked).length
@@ -41,7 +43,7 @@ export default function ShoppingListScreen() {
         }
       />
 
-      <AddItemForm categories={categories} searchItems={searchItems} onAdd={addToList} />
+      <AddItemForm categories={categories} searchItems={searchItems} onAdd={(fields) => addToList(fields, confirmUnits)} />
 
       {loading && <SkeletonRows rows={5} />}
 
@@ -81,6 +83,8 @@ export default function ShoppingListScreen() {
           </section>
         )
       })}
+
+      {unitDialog}
     </div>
   )
 }

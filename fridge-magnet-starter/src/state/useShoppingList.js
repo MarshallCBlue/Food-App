@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { addOrMergeShoppingItem } from '../lib/shoppingList'
 
 // The shopping list itself, plus the catalogue lookups that make adding a
 // repeat item a one-tap affair instead of retyping its aisle every time.
@@ -76,8 +77,10 @@ export function useShoppingList(householdId) {
     [householdId]
   )
 
+  // confirmUnits is the pop-up from useUnitConfirm — it is only used when
+  // the item is already on the list in a different unit.
   const addToList = useCallback(
-    async ({ itemId, name, categoryId, quantity, unit, note }) => {
+    async ({ itemId, name, categoryId, quantity, unit, note }, confirmUnits) => {
       let resolvedItemId = itemId
 
       if (!resolvedItemId) {
@@ -100,14 +103,11 @@ export function useShoppingList(householdId) {
         }
       }
 
-      const { error } = await supabase.from('shopping_list_items').insert({
-        household_id: householdId,
-        item_id: resolvedItemId,
-        quantity: quantity || 1,
-        unit: unit || null,
-        note: note || null,
-      })
-      if (error) throw error
+      return addOrMergeShoppingItem(
+        householdId,
+        { itemId: resolvedItemId, quantity, unit, note },
+        confirmUnits
+      )
     },
     [householdId, findExistingItem]
   )

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { addOrMergeShoppingItem } from '../lib/shoppingList'
 
 // The inventory itself, plus the two ways of using something up. Every
 // change also writes a stock_events row, so nothing that happened to an
@@ -230,15 +231,10 @@ export function useInventory(householdId) {
   return { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate }
 }
 
-// Used by the "add to shopping list?" prompt after an item runs out —
-// deliberately standalone since that prompt lives on the Inventory screen,
-// not wherever the shopping list's own state happens to be mounted.
-export async function addItemToShoppingList(householdId, itemId, unit) {
-  const { error } = await supabase.from('shopping_list_items').insert({
-    household_id: householdId,
-    item_id: itemId,
-    quantity: 1,
-    unit: unit || null,
-  })
-  if (error) throw error
+// Used by the "add to shopping list?" prompt after an item runs out, and
+// by the cook screen for whatever a recipe was short of — deliberately
+// standalone since neither lives where the shopping list's own state is
+// mounted. Tops up a line already on the list instead of adding another.
+export async function addItemToShoppingList(householdId, itemId, unit, quantity = 1, confirmUnits) {
+  return addOrMergeShoppingItem(householdId, { itemId, quantity, unit }, confirmUnits)
 }

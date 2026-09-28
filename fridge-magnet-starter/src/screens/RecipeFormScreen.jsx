@@ -6,6 +6,7 @@ import PageHeader from '../components/PageHeader'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
 import { parseRecipeText } from '../lib/parseRecipeText'
+import { uploadRecipeImage, deleteRecipeImage, recipeImageUrl } from '../lib/recipeImages'
 
 function blankIngredient() {
   return { key: crypto.randomUUID(), itemId: null, name: '', quantity: '1', unit: '' }
@@ -25,6 +26,12 @@ export default function RecipeFormScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [pastedText, setPastedText] = useState('')
+  const [instructions, setInstructions] = useState('')
+  // imagePath is what gets saved on the recipe; originalImagePath is what
+  // was saved before editing, so a replaced photo can be tidied away.
+  const [imagePath, setImagePath] = useState(null)
+  const [originalImagePath, setOriginalImagePath] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     if (!isEditing) return
@@ -34,6 +41,9 @@ export default function RecipeFormScreen() {
       .then((recipe) => {
         if (cancelled) return
         setName(recipe.name)
+        setInstructions(recipe.instructions || '')
+        setImagePath(recipe.image_path || null)
+        setOriginalImagePath(recipe.image_path || null)
         setIngredients(
           recipe.recipe_ingredients.length > 0
             ? recipe.recipe_ingredients.map((ri) => ({
@@ -73,9 +83,36 @@ export default function RecipeFormScreen() {
       return setError("Couldn't find any ingredients in that text. Make sure it includes the ingredient list.")
     }
     if (parsed.name) setName(parsed.name)
+    if (parsed.instructions) setInstructions(parsed.instructions)
     setIngredients(parsed.ingredients.map((ingredient) => ({ ...blankIngredient(), ...ingredient })))
     setPastedText('')
     setShowImport(false)
+  }
+
+  // The photo uploads the moment it is picked, so saving the recipe
+  // afterwards is instant. A photo picked in this visit and then swapped
+  // for another is deleted straight away; the one saved before editing is
+  // only deleted once the recipe is actually saved.
+  async function handleImagePicked(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setError(null)
+    setUploadingImage(true)
+    try {
+      const newPath = await uploadRecipeImage(household.id, file)
+      if (imagePath && imagePath !== originalImagePath) deleteRecipeImage(imagePath)
+      setImagePath(newPath)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  function handleImageRemoved() {
+    if (imagePath && imagePath !== originalImagePath) deleteRecipeImage(imagePath)
+    setImagePath(null)
   }
 
   async function handleSubmit(event) {
@@ -88,10 +125,12 @@ export default function RecipeFormScreen() {
 
     setSubmitting(true)
     try {
+      const details = { instructions, imagePath }
       if (isEditing) {
-        await updateRecipe(recipeId, name, validIngredients)
+        await updateRecipe(recipeId, name, validIngredients, details)
+        if (originalImagePath && originalImagePath !== imagePath) deleteRecipeImage(originalImagePath)
       } else {
-        await createRecipe(name, validIngredients)
+        await createRecipe(name, validIngredients, details)
       }
       navigate('/recipes')
     } catch (err) {
@@ -158,6 +197,34 @@ export default function RecipeFormScreen() {
           aria-label="Recipe name"
         />
 
+        {imagePath ? (
+          <div className="fm-recipe-photo">
+            <img src={recipeImageUrl(imagePath)} alt={name ? `Photo of ${name}` : 'Recipe photo'} />
+            <div className="fm-inline">
+              <label className="fm-btn fm-btn--secondary fm-btn--sm">
+                <Icon name="edit" />
+                Change photo
+                <input type="file" accept="image/*" hidden onChange={handleImagePicked} />
+              </label>
+              <button type="button" className="fm-btn fm-btn--quiet fm-btn--sm" onClick={handleImageRemoved}>
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className={`fm-btn fm-btn--dashed fm-btn--block${uploadingImage ? ' is-busy' : ''}`}>
+            <Icon name="plus" />
+            {uploadingImage ? 'Uploading photo' : 'Add a photo (optional)'}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handleImagePicked}
+              disabled={uploadingImage}
+            />
+          </label>
+        )}
+
         {ingredients.map((ingredient, index) => (
           <IngredientRow
             key={ingredient.key}
@@ -178,6 +245,17 @@ export default function RecipeFormScreen() {
           Add ingredient
         </button>
 
+        <label className="fm-label">
+          Method (optional)
+          <textarea
+            className="fm-field fm-field--textarea"
+            rows={6}
+            placeholder={'One step per line, for example:\nFry the onion until soft\nAdd the mince and brown it'}
+            value={instructions}
+            onChange={(event) => setInstructions(event.target.value)}
+          />
+        </label>
+
         {error && (
           <p className="fm-error">
             <Icon name="alert" />
@@ -185,7 +263,7 @@ export default function RecipeFormScreen() {
           </p>
         )}
 
-        <button type="submit" className="fm-btn fm-btn--block" disabled={submitting}>
+        <button type="submit" className="fm-btn fm-btn--block" disabled={submitting || uploadingImage}>
           {submitting ? 'Saving' : 'Save recipe'}
         </button>
       </form>

@@ -11,6 +11,7 @@ import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
 import Toast from '../components/Toast'
 import Icon from '../components/Icon'
+import { useUnitConfirm } from '../components/UnitConfirmDialog'
 
 export default function InventoryScreen() {
   const { household } = useAuth()
@@ -21,6 +22,7 @@ export default function InventoryScreen() {
   )
   const [editingId, setEditingId] = useState(null)
   const [justEmptied, setJustEmptied] = useState(null)
+  const [confirmUnits, unitDialog] = useUnitConfirm()
 
   const groups = useMemo(() => groupByLocation(rows), [rows])
 
@@ -44,8 +46,9 @@ export default function InventoryScreen() {
   }
 
   async function handleAddToShoppingList() {
-    await addItemToShoppingList(household.id, justEmptied.itemId, justEmptied.unit)
+    const item = justEmptied
     setJustEmptied(null)
+    await addItemToShoppingList(household.id, item.itemId, item.unit, 1, confirmUnits)
   }
 
   return (
@@ -117,6 +120,8 @@ export default function InventoryScreen() {
           onDismiss={() => setJustEmptied(null)}
         />
       )}
+
+      {unitDialog}
     </div>
   )
 }
