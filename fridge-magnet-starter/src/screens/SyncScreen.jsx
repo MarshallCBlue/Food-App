@@ -55,8 +55,11 @@ export default function SyncScreen() {
     setError(null)
     setSubmitting(true)
     try {
+      // Named explicitly so the move can only ever touch this household's
+      // list — never another one the signed-in person can also see.
       const { data: syncRunId, error: rpcError } = await supabase.rpc('sync_shopping_list_to_inventory', {
         location_overrides: overrides,
+        target_household_id: household.id,
       })
       if (rpcError) throw rpcError
 

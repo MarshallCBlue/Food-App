@@ -225,6 +225,18 @@ a {
   text-overflow: ellipsis;
 }
 
+/* While an admin is inside someone else's household — the magnet's red,
+   because edits here land on other people's lists. */
+.fm-header--admin {
+  background: var(--fm-signal-tint);
+  border-bottom: 2px solid var(--fm-signal);
+}
+
+.fm-header--admin .fm-header__mark,
+.fm-header--admin .fm-header__name {
+  color: var(--fm-signal);
+}
+
 /* ── Bottom bar ───────────────────────────────────────────────────── */
 .fm-nav {
   position: fixed;

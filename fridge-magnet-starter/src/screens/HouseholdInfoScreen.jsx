@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { usePushSubscription } from '../state/usePushSubscription'
 import { supabase } from '../supabaseClient'
@@ -16,9 +17,14 @@ const STATUS_COPY = {
 // The household's join code, its NFC tag address, reminders, and the way
 // out. Reached from the cog in the top bar.
 export default function HouseholdInfoScreen() {
-  const { household, session, signOut } = useAuth()
+  const { household, ownHousehold, isAdmin, isViewingOther, session, signOut } = useAuth()
   const [copied, setCopied] = useState(false)
-  const { status, error, subscribe, unsubscribe } = usePushSubscription(household.id, session.user.id)
+  // Reminders belong to this phone and this person, so they always stay
+  // tied to your own household — even while an admin is looking at another.
+  const { status, error, subscribe, unsubscribe } = usePushSubscription(
+    (ownHousehold || household).id,
+    session.user.id
+  )
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteStatus, setInviteStatus] = useState('idle')
   const [inviteError, setInviteError] = useState(null)
@@ -58,6 +64,19 @@ export default function HouseholdInfoScreen() {
   return (
     <div>
       <PageHeader backTo={-1} title={household.name} subtitle="Household, tag and reminders" />
+
+      {isAdmin && (
+        <section className="fm-panel">
+          <h2 className="fm-panel__head">
+            <Icon name="settings" />
+            Admin
+          </h2>
+          <p className="fm-panel__body">See, change or delete any household and any account.</p>
+          <Link to="/admin" className="fm-btn fm-btn--secondary" style={{ marginTop: '0.75rem' }}>
+            Open admin
+          </Link>
+        </section>
+      )}
 
       <section className="fm-panel">
         <h2 className="fm-panel__head">
@@ -122,47 +141,49 @@ export default function HouseholdInfoScreen() {
         </button>
       </section>
 
-      <section className="fm-panel">
-        <h2 className="fm-panel__head">
-          <Icon name="bell" />
-          Reminders
-        </h2>
-        <p className="fm-panel__body">
-          One notification a day, around 8am, if anything is about to go off. Never one per item.
-        </p>
-
-        {status === 'needs-install' && (
-          <div style={{ marginTop: '0.75rem' }}>
-            <InstallCard compact />
-          </div>
-        )}
-
-        {status === 'needs-permission' && (
-          <button type="button" className="fm-btn" style={{ marginTop: '0.75rem' }} onClick={subscribe}>
-            Turn on reminders
-          </button>
-        )}
-
-        {status === 'subscribed' && (
-          <>
-            <p className="fm-ok" style={{ marginTop: '0.75rem' }}>
-              <Icon name="check" />
-              Reminders are on for this phone
-            </p>
-            <button type="button" className="fm-btn fm-btn--secondary" style={{ marginTop: '0.75rem' }} onClick={unsubscribe}>
-              Turn off
-            </button>
-          </>
-        )}
-
-        {STATUS_COPY[status] && <p className="fm-panel__body">{STATUS_COPY[status]}</p>}
-        {error && (
-          <p className="fm-error" style={{ marginTop: '0.75rem' }}>
-            <Icon name="alert" />
-            {error}
+      {!isViewingOther && (
+        <section className="fm-panel">
+          <h2 className="fm-panel__head">
+            <Icon name="bell" />
+            Reminders
+          </h2>
+          <p className="fm-panel__body">
+            One notification a day, around 8am, if anything is about to go off. Never one per item.
           </p>
-        )}
-      </section>
+
+          {status === 'needs-install' && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <InstallCard compact />
+            </div>
+          )}
+
+          {status === 'needs-permission' && (
+            <button type="button" className="fm-btn" style={{ marginTop: '0.75rem' }} onClick={subscribe}>
+              Turn on reminders
+            </button>
+          )}
+
+          {status === 'subscribed' && (
+            <>
+              <p className="fm-ok" style={{ marginTop: '0.75rem' }}>
+                <Icon name="check" />
+                Reminders are on for this phone
+              </p>
+              <button type="button" className="fm-btn fm-btn--secondary" style={{ marginTop: '0.75rem' }} onClick={unsubscribe}>
+                Turn off
+              </button>
+            </>
+          )}
+
+          {STATUS_COPY[status] && <p className="fm-panel__body">{STATUS_COPY[status]}</p>}
+          {error && (
+            <p className="fm-error" style={{ marginTop: '0.75rem' }}>
+              <Icon name="alert" />
+              {error}
+            </p>
+          )}
+        </section>
+      )}
 
       <button type="button" className="fm-btn fm-btn--quiet fm-btn--block" style={{ marginTop: '1rem' }} onClick={signOut}>
         <Icon name="signOut" />

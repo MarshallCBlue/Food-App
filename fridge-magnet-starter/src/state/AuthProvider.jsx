@@ -1,18 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
 const AuthContext = createContext(null)
 
-// Wraps the whole app. It tracks two things — who is signed in, and which
-// household they belong to — so every screen reads those from here instead
-// of each asking Supabase separately.
+// Wraps the whole app. It tracks who is signed in, which household they
+// belong to, and whether they are an admin — so every screen reads those
+// from here instead of each asking Supabase separately.
 //
 // `session` and `household` both start as `undefined`, meaning "still
 // checking". They settle to `null` (signed out / no household yet) or a
 // real value once Supabase has answered.
+//
+// An admin can step into someone else's household from the admin screen.
+// While they do, `household` is that other household, so every existing
+// screen (list, inventory, recipes) works on it unchanged, and
+// `ownHousehold` still holds their own for the way back.
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined)
-  const [household, setHousehold] = useState(undefined)
+  const [ownHousehold, setHousehold] = useState(undefined)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [viewingHousehold, setViewingHousehold] = useState(null)
 
   const loadHousehold = useCallback(async (userId) => {
     const { data, error } = await supabase
@@ -31,27 +38,55 @@ export function AuthProvider({ children }) {
     setHousehold(data ? data.households : null)
   }, [])
 
+  // The database decides who is an admin, and enforces it on every read
+  // and write. This only decides whether to show the admin screen.
+  const loadIsAdmin = useCallback(async () => {
+    const { data, error } = await supabase.rpc('is_admin')
+    setIsAdmin(!error && data === true)
+  }, [])
+
+  // Supabase re-announces the same sign-in on refreshes and when the app
+  // comes back into focus. Only a different person (or signing out)
+  // should reload everything and drop the household being looked at.
+  const loadedUserId = useRef(undefined)
+
+  const loadAccount = useCallback(
+    (current) => {
+      const userId = current?.user.id ?? null
+      if (userId === loadedUserId.current) return
+      loadedUserId.current = userId
+
+      setViewingHousehold(null)
+      if (current) {
+        loadHousehold(current.user.id)
+        loadIsAdmin()
+      } else {
+        setHousehold(null)
+        setIsAdmin(false)
+      }
+    },
+    [loadHousehold, loadIsAdmin]
+  )
+
   useEffect(() => {
     let active = true
 
     supabase.auth.getSession().then(({ data: { session: current } }) => {
       if (!active) return
       setSession(current)
-      if (current) loadHousehold(current.user.id)
-      else setHousehold(null)
+      loadAccount(current)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, current) => {
       setSession(current)
-      if (current) loadHousehold(current.user.id)
-      else setHousehold(null)
+      loadAccount(current)
     })
 
     return () => {
       active = false
       listener.subscription.unsubscribe()
     }
-  }, [loadHousehold])
+  }, [loadAccount])
 
   // Re-reads which household the signed-in person belongs to. Called
   // explicitly after joining, and after the "create a household" screen
@@ -85,13 +120,26 @@ export function AuthProvider({ children }) {
   }, [])
 
   const joinHousehold = useCallback(async (code) => {
-    const { error } = await supabase.rpc('join_household', { code })
+    const { data, error } = await supabase.rpc('join_household', { code })
     if (error) throw error
+    // A wrong code comes back empty rather than as an error, so the
+    // database can count it towards the too-many-guesses limit.
+    if (!data) throw new Error('No household found for that code')
   }, [])
+
+  const stopViewingHousehold = useCallback(() => setViewingHousehold(null), [])
+
+  const household = viewingHousehold || ownHousehold
+  const isViewingOther = Boolean(viewingHousehold) && viewingHousehold.id !== ownHousehold?.id
 
   const value = {
     session,
     household,
+    ownHousehold,
+    isAdmin,
+    isViewingOther,
+    viewHousehold: setViewingHousehold,
+    stopViewingHousehold,
     refreshHousehold,
     signIn,
     signUp,
