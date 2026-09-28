@@ -55,13 +55,18 @@ Deno.serve(async (req) => {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // Your own membership row specifically — a household with two people
+  // has two rows, and an admin can see every household's rows. Admins may
+  // invite into any household.
   const { data: membership } = await callerClient
     .from("household_members")
     .select("household_id")
     .eq("household_id", householdId)
+    .eq("user_id", userData.user.id)
     .maybeSingle();
+  const { data: isAdmin } = await callerClient.rpc("is_admin");
 
-  if (!membership) {
+  if (!membership && isAdmin !== true) {
     return new Response(JSON.stringify({ error: "You're not a member of that household" }), {
       status: 403,
       headers: { "Content-Type": "application/json" },
@@ -71,14 +76,31 @@ Deno.serve(async (req) => {
   // Only now switches to the admin client — inviteUserByEmail requires
   // the service role key, which must never be reachable from the browser.
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
-  const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-    data: { invited_household_id: householdId },
+  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
     redirectTo: appUrl,
   });
 
-  if (inviteError) {
-    return new Response(JSON.stringify({ error: inviteError.message }), {
+  if (inviteError || !invited.user) {
+    return new Response(JSON.stringify({ error: inviteError?.message ?? "Invite failed" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // The membership is written here, with the service role, rather than by
+  // a database trigger reading the new user's metadata — anyone can put
+  // whatever they like in their own metadata when they sign up, so that
+  // would have let a stranger name any household and walk into it.
+  const { error: joinError } = await adminClient
+    .from("household_members")
+    .upsert(
+      { household_id: householdId, user_id: invited.user.id },
+      { onConflict: "household_id,user_id", ignoreDuplicates: true },
+    );
+
+  if (joinError) {
+    return new Response(JSON.stringify({ error: joinError.message }), {
+      status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
