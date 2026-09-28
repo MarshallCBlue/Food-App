@@ -5,6 +5,7 @@ import { useRecipes } from '../state/useRecipes'
 import PageHeader from '../components/PageHeader'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
+import { parseRecipeText } from '../lib/parseRecipeText'
 
 function blankIngredient() {
   return { key: crypto.randomUUID(), itemId: null, name: '', quantity: '1', unit: '' }
@@ -22,6 +23,8 @@ export default function RecipeFormScreen() {
   const [loaded, setLoaded] = useState(!isEditing)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [pastedText, setPastedText] = useState('')
 
   useEffect(() => {
     if (!isEditing) return
@@ -61,6 +64,18 @@ export default function RecipeFormScreen() {
 
   function removeIngredient(key) {
     setIngredients((current) => current.filter((ingredient) => ingredient.key !== key))
+  }
+
+  function handleImport() {
+    setError(null)
+    const parsed = parseRecipeText(pastedText)
+    if (!parsed || parsed.ingredients.length === 0) {
+      return setError("Couldn't find any ingredients in that text. Make sure it includes the ingredient list.")
+    }
+    if (parsed.name) setName(parsed.name)
+    setIngredients(parsed.ingredients.map((ingredient) => ({ ...blankIngredient(), ...ingredient })))
+    setPastedText('')
+    setShowImport(false)
   }
 
   async function handleSubmit(event) {
@@ -104,6 +119,37 @@ export default function RecipeFormScreen() {
       />
 
       <form onSubmit={handleSubmit} className="fm-stack fm-stack--loose">
+        {!isEditing && !showImport && (
+          <button type="button" className="fm-btn fm-btn--dashed fm-btn--block" onClick={() => setShowImport(true)}>
+            <Icon name="copy" />
+            Paste a recipe from another app
+          </button>
+        )}
+
+        {!isEditing && showImport && (
+          <div className="fm-panel fm-stack">
+            <p className="fm-panel__body">
+              Open the share link, select all the text on the page, copy it, and paste it below.
+            </p>
+            <textarea
+              className="fm-field"
+              rows={8}
+              placeholder="Paste the recipe here"
+              value={pastedText}
+              onChange={(event) => setPastedText(event.target.value)}
+              aria-label="Recipe text to import"
+            />
+            <div className="fm-inline">
+              <button type="button" className="fm-btn" onClick={handleImport} disabled={!pastedText.trim()}>
+                Fill in the form
+              </button>
+              <button type="button" className="fm-btn fm-btn--quiet" onClick={() => setShowImport(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         <input
           className="fm-field"
           placeholder="Recipe name"
