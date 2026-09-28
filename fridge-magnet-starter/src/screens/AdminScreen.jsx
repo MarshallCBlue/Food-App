@@ -42,6 +42,7 @@ export default function AdminScreen() {
     if (isAdmin) load()
   }, [isAdmin, load])
 
+  if (isAdmin === null) return <SkeletonRows rows={3} />
   if (!isAdmin) return <Navigate to="/" replace />
 
   function openHousehold(target) {
@@ -66,7 +67,7 @@ export default function AdminScreen() {
 
   return (
     <div>
-      <PageHeader backTo={-1} title="Admin" subtitle="Every household and account" />
+      <PageHeader title="Admin" subtitle="Every household and account" />
 
       {error && (
         <p className="fm-error" style={{ marginBottom: '1rem' }}>

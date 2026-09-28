@@ -172,6 +172,13 @@ const paths = {
       <path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8" />
     </>
   ),
+  // The fifth tab, shown to admins only
+  shield: (
+    <>
+      <path d="M12 3.5 5 6v5.5c0 4.2 2.9 7.6 7 9 4.1-1.4 7-4.8 7-9V6l-7-2.5Z" />
+      <path d="m9 12 2.2 2.2L15.5 10" />
+    </>
+  ),
 }
 
 export default function Icon({ name, size = 20, className, ...rest }) {
