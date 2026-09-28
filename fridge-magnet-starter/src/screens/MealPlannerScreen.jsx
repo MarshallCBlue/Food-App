@@ -76,7 +76,7 @@ export default function MealPlannerScreen() {
   const byDay = useMemo(() => {
     const groups = {}
     for (const entry of entries) {
-      ;(groups[entry.planned_on] ||= []).push(entry)
+      ; (groups[entry.planned_on] ||= []).push(entry)
     }
     for (const list of Object.values(groups)) {
       list.sort((a, b) => MEAL_ORDER[a.meal] - MEAL_ORDER[b.meal])
@@ -96,7 +96,7 @@ export default function MealPlannerScreen() {
   return (
     <div>
       <PageHeader
-        title="Meal planner"
+        title="Meal Planner"
         subtitle={`${days[0].toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${days[6].toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
         actions={
           <div className="fm-chips">

@@ -27,7 +27,7 @@ export default function ShoppingListScreen() {
   return (
     <div>
       <PageHeader
-        title="Shopping list"
+        title="Shopping List"
         subtitle={
           rows.length > 0
             ? `${ticked} of ${rows.length} ticked off`
