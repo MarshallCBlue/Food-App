@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useRecipes } from '../state/useRecipes'
+import { allTags, hasAllTags, sameTag } from '../lib/recipeTags'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
@@ -10,12 +11,29 @@ import Icon from '../components/Icon'
 
 // A tab of its own now, rather than a text link hidden at the top of the
 // inventory screen — so it has no back button, the same as the other
-// three tabs.
+// tabs. Tags along the top filter the list: pick several and only
+// recipes carrying every picked tag are shown.
 export default function RecipesScreen() {
   const { household } = useAuth()
   const { recipes, loading, deleteRecipe } = useRecipes(household.id)
   const navigate = useNavigate()
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [chosenTags, setChosenTags] = useState([])
+
+  const tagsInUse = useMemo(() => allTags(recipes), [recipes])
+
+  // If a chosen tag disappears (its last recipe was deleted or edited),
+  // it quietly stops filtering instead of hiding everything.
+  const activeTags = chosenTags.filter((tag) => tagsInUse.some((used) => sameTag(used, tag)))
+  const shown = recipes.filter((recipe) => hasAllTags(recipe, activeTags))
+
+  function toggleTag(tag) {
+    setChosenTags((current) =>
+      current.some((chosen) => sameTag(chosen, tag))
+        ? current.filter((chosen) => !sameTag(chosen, tag))
+        : [...current, tag]
+    )
+  }
 
   return (
     <div>
@@ -33,6 +51,31 @@ export default function RecipesScreen() {
         New recipe
       </button>
 
+      {tagsInUse.length > 0 && (
+        <div className="fm-chips fm-chips--wrap fm-filter" role="group" aria-label="Filter recipes by tag">
+          {tagsInUse.map((tag) => {
+            const on = activeTags.some((chosen) => sameTag(chosen, tag))
+            return (
+              <button
+                key={tag}
+                type="button"
+                className={`fm-chip${on ? ' is-on' : ''}`}
+                aria-pressed={on}
+                onClick={() => toggleTag(tag)}
+              >
+                {on && <Icon name="check" />}
+                {tag}
+              </button>
+            )
+          })}
+          {activeTags.length > 0 && (
+            <button type="button" className="fm-chip fm-chip--quiet" onClick={() => setChosenTags([])}>
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {loading && (
         <div style={{ marginTop: '1.5rem' }}>
           <SkeletonRows rows={3} />
@@ -47,14 +90,27 @@ export default function RecipesScreen() {
         />
       )}
 
-      {recipes.length > 0 && (
+      {!loading && recipes.length > 0 && shown.length === 0 && (
+        <EmptyState
+          icon="recipes"
+          title="No recipes match"
+          body={`Nothing is tagged with all of: ${activeTags.join(', ')}.`}
+          action={
+            <button type="button" className="fm-btn fm-btn--secondary" onClick={() => setChosenTags([])}>
+              Show all recipes
+            </button>
+          }
+        />
+      )}
+
+      {shown.length > 0 && (
         <section className="fm-group" style={{ marginTop: '1.5rem' }}>
           <div className="fm-rail">
-            <h2 className="fm-rail__name">Saved</h2>
-            <span className="fm-rail__count">{recipes.length}</span>
+            <h2 className="fm-rail__name">{activeTags.length > 0 ? 'Matching' : 'Saved'}</h2>
+            <span className="fm-rail__count">{shown.length}</span>
           </div>
 
-          {recipes.map((recipe) => (
+          {shown.map((recipe) => (
             <div className="fm-row" key={recipe.id}>
               <div className="fm-row__main">
                 <Link to={`/recipes/${recipe.id}/cook`} className="fm-row__button" style={{ color: 'inherit' }}>
@@ -63,6 +119,7 @@ export default function RecipesScreen() {
                     <span className="fm-row__meta">
                       {recipe.recipe_ingredients.length} ingredient
                       {recipe.recipe_ingredients.length === 1 ? '' : 's'}
+                      {recipe.tags?.length > 0 && ` · ${recipe.tags.join(', ')}`}
                     </span>
                   </span>
                 </Link>

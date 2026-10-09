@@ -14,7 +14,7 @@ export function useRecipes(householdId) {
     if (!householdId) return
     const { data, error } = await supabase
       .from('recipes')
-      .select('id, name, image_path, recipe_ingredients ( id )')
+      .select('id, name, image_path, tags, recipe_ingredients ( id )')
       .eq('household_id', householdId)
       .order('name')
 
@@ -116,7 +116,7 @@ export function useRecipes(householdId) {
     }
   }
 
-  // details = { instructions, imagePath } — both optional.
+  // details = { instructions, imagePath, tags } — all optional.
   const createRecipe = useCallback(
     async (name, ingredients, details = {}) => {
       const { data: recipe, error } = await supabase
@@ -126,6 +126,7 @@ export function useRecipes(householdId) {
           name: name.trim(),
           instructions: details.instructions?.trim() || null,
           image_path: details.imagePath || null,
+          tags: details.tags || [],
         })
         .select('id')
         .single()
@@ -148,6 +149,7 @@ export function useRecipes(householdId) {
           name: name.trim(),
           instructions: details.instructions?.trim() || null,
           image_path: details.imagePath || null,
+          tags: details.tags || [],
         })
         .eq('id', recipeId)
       if (renameError) throw renameError
@@ -176,7 +178,7 @@ export function useRecipes(householdId) {
     const { data, error } = await supabase
       .from('recipes')
       .select(
-        'id, name, instructions, image_path, recipe_ingredients ( id, quantity, unit, item:items ( id, name ) )'
+        'id, name, instructions, image_path, tags, recipe_ingredients ( id, quantity, unit, item:items ( id, name ) )'
       )
       .eq('id', recipeId)
       .single()
