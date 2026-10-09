@@ -527,8 +527,6 @@ async function resolveRecipe(ctx: Ctx, ref: { recipe_id?: string; name?: string 
   };
 }
 
-// Ingredients with how much is in stock, the same sum the app's cook
-// screen shows.
 // Units, matching the database's convert_amount (and the app's
 // lib/units.js): weights convert between each other, volumes between
 // each other, and anything else ("tin", "bag", none) only matches itself.
@@ -565,6 +563,8 @@ function convertAmount(amount: number, from: string | null, to: string | null): 
   return Math.round(((amount * fromFactor) / toFactor) * 10000) / 10000;
 }
 
+// Ingredients with how much is in stock, worked out the same way as the
+// app's cook screen (units converted where they can be).
 async function recipeIngredients(ctx: Ctx, recipeIds: string[]) {
   if (recipeIds.length === 0) return [];
   const ingredients = check(
