@@ -17,9 +17,7 @@ export default function InventoryScreen() {
   const { household } = useAuth()
   const navigate = useNavigate()
   const { locations } = useLocations(household.id)
-  const { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate } = useInventory(
-    household.id
-  )
+  const { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem } = useInventory(household.id)
   const [editingId, setEditingId] = useState(null)
   const [justEmptied, setJustEmptied] = useState(null)
   const [confirmUnits, unitDialog] = useUnitConfirm()
@@ -43,6 +41,14 @@ export default function InventoryScreen() {
     await clearAll(row)
     setEditingId(null)
     setJustEmptied({ itemId: row.item.id, name: row.item.name, unit: row.unit })
+  }
+
+  // Saves the edited details. Setting the amount to 0 counts as "all
+  // gone", so it offers to put the item back on the shopping list.
+  async function handleSave(row, changes) {
+    const status = await updateItem(row, changes)
+    setEditingId(null)
+    if (status === 'removed') setJustEmptied({ itemId: row.item.id, name: row.item.name, unit: row.unit })
   }
 
   async function handleAddToShoppingList() {
@@ -102,11 +108,12 @@ export default function InventoryScreen() {
             <InventoryRow
               key={row.id}
               row={row}
+              locations={locations}
               editing={editingId === row.id}
               onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
               onTakeSome={(amount) => handleTakeSome(row, amount)}
               onClearAll={() => handleClearAll(row)}
-              onSetExpiry={(date) => setExpiryDate(row.id, date)}
+              onSave={(changes) => handleSave(row, changes)}
             />
           ))}
         </section>

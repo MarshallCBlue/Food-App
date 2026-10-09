@@ -1435,3 +1435,51 @@ select.fm-field {
 .fm-note svg {
   vertical-align: -2px;
 }
+
+/* Chips that wrap onto more lines when there are many (recipe tags) */
+.fm-chips--wrap {
+  flex-wrap: wrap;
+}
+
+/* A chip that is switched on: a picked filter, or a tag on a recipe */
+.fm-chip.is-on {
+  border-color: var(--fm-brand);
+  background: var(--fm-brand-tint);
+  color: var(--fm-brand);
+}
+
+.fm-chip.is-on svg {
+  color: currentColor;
+}
+
+/* "Clear" at the end of the filter: a plain word, no border */
+.fm-chip--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--fm-muted);
+}
+
+/* The tag filter row on the Recipes tab */
+.fm-filter {
+  margin-top: var(--fm-space-3);
+}
+
+/* A small heading splitting a row's panel into sections */
+.fm-panel-heading {
+  margin-top: var(--fm-space-2);
+  color: var(--fm-muted);
+  font-size: var(--fm-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Labelled boxes sitting side by side (Amount and Unit) */
+.fm-inline > .fm-label--qty {
+  flex: 0 0 5.5rem;
+}
+
+.fm-inline > .fm-label--grow {
+  flex: 1;
+  min-width: 0;
+}

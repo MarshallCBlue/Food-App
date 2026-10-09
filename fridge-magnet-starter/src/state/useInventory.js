@@ -150,22 +150,27 @@ export function useInventory(householdId) {
     [householdId, findExistingItem]
   )
 
-  // Sets or changes a use-by date on a row already in the inventory — the
-  // plan calls it "an optional date field on any inventory item", not
-  // something only choosable at the moment it's added.
-  const setExpiryDate = useCallback(async (rowId, expiresOn) => {
-    const { error } = await supabase
-      .from('inventory_items')
-      .update({ expires_on: expiresOn || null })
-      .eq('id', rowId)
-
-    if (error) {
-      if (error.code === '23505') {
-        throw new Error('Another batch of this item already has that exact date in this location.')
-      }
-      throw error
-    }
-  }, [])
+  // Changes the amount, unit, place and use-by date of something already
+  // in the inventory, all in one go. The database function does the work
+  // (see update_inventory_item), including joining two batches together
+  // when this one is moved somewhere that already has the same food and
+  // date. Returns 'updated', 'merged' or 'removed' (amount set to 0).
+  const updateItem = useCallback(
+    async (row, { quantity, unit, locationId, expiresOn }) => {
+      const { data, error } = await supabase.rpc('update_inventory_item', {
+        target_inventory_item_id: row.id,
+        new_quantity: quantity,
+        new_unit: unit || null,
+        new_location_id: locationId,
+        new_expires_on: expiresOn || null,
+      })
+      if (error) throw error
+      // Redraw straight away rather than waiting for the live update.
+      await load()
+      return data.status
+    },
+    [load]
+  )
 
   // Takes a specific amount off. Returns true if that used the last of
   // it, so the screen can offer to add it back to the shopping list.
@@ -228,7 +233,7 @@ export function useInventory(householdId) {
     [householdId]
   )
 
-  return { rows, loading, searchItems, addToInventory, takeSome, clearAll, setExpiryDate }
+  return { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem }
 }
 
 // Used by the "add to shopping list?" prompt after an item runs out, and

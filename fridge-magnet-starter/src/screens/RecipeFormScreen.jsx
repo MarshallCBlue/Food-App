@@ -5,6 +5,8 @@ import { useRecipes } from '../state/useRecipes'
 import PageHeader from '../components/PageHeader'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
+import TagPicker from '../components/TagPicker'
+import { allTags } from '../lib/recipeTags'
 import { parseRecipeText } from '../lib/parseRecipeText'
 import { uploadRecipeImage, deleteRecipeImage, recipeImageUrl } from '../lib/recipeImages'
 
@@ -14,7 +16,7 @@ function blankIngredient() {
 
 export default function RecipeFormScreen() {
   const { household } = useAuth()
-  const { searchItems, createRecipe, updateRecipe, loadRecipeWithIngredients } = useRecipes(household.id)
+  const { recipes, searchItems, createRecipe, updateRecipe, loadRecipeWithIngredients } = useRecipes(household.id)
   const navigate = useNavigate()
   const { recipeId } = useParams()
   const isEditing = Boolean(recipeId)
@@ -27,6 +29,7 @@ export default function RecipeFormScreen() {
   const [showImport, setShowImport] = useState(false)
   const [pastedText, setPastedText] = useState('')
   const [instructions, setInstructions] = useState('')
+  const [tags, setTags] = useState([])
   // imagePath is what gets saved on the recipe; originalImagePath is what
   // was saved before editing, so a replaced photo can be tidied away.
   const [imagePath, setImagePath] = useState(null)
@@ -42,6 +45,7 @@ export default function RecipeFormScreen() {
         if (cancelled) return
         setName(recipe.name)
         setInstructions(recipe.instructions || '')
+        setTags(recipe.tags || [])
         setImagePath(recipe.image_path || null)
         setOriginalImagePath(recipe.image_path || null)
         setIngredients(
@@ -125,7 +129,7 @@ export default function RecipeFormScreen() {
 
     setSubmitting(true)
     try {
-      const details = { instructions, imagePath }
+      const details = { instructions, imagePath, tags }
       if (isEditing) {
         await updateRecipe(recipeId, name, validIngredients, details)
         if (originalImagePath && originalImagePath !== imagePath) deleteRecipeImage(originalImagePath)
@@ -255,6 +259,8 @@ export default function RecipeFormScreen() {
             onChange={(event) => setInstructions(event.target.value)}
           />
         </label>
+
+        <TagPicker tags={tags} knownTags={allTags(recipes)} onChange={setTags} />
 
         {error && (
           <p className="fm-error">
