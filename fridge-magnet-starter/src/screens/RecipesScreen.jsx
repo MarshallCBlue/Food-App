@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Icon from '../components/Icon'
+import { useErrorToast } from '../components/useErrorToast'
 
 // A tab of its own now, rather than a text link hidden at the top of the
 // inventory screen — so it has no back button, the same as the other
@@ -19,6 +20,7 @@ export default function RecipesScreen() {
   const navigate = useNavigate()
   const [pendingDelete, setPendingDelete] = useState(null)
   const [chosenTags, setChosenTags] = useState([])
+  const [attempt, errorToast] = useErrorToast()
 
   const tagsInUse = useMemo(() => allTags(recipes), [recipes])
 
@@ -152,11 +154,14 @@ export default function RecipesScreen() {
           confirmLabel="Delete recipe"
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => {
-            deleteRecipe(pendingDelete.id)
+            const recipe = pendingDelete
             setPendingDelete(null)
+            attempt(() => deleteRecipe(recipe.id))
           }}
         />
       )}
+
+      {errorToast}
     </div>
   )
 }

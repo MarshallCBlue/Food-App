@@ -148,8 +148,12 @@ export function useShoppingList(householdId) {
     // round-trip, so the tap feels instant on the phone that made it.
     setRows((current) => current.filter((row) => row.id !== id))
     const { error } = await supabase.from('shopping_list_items').delete().eq('id', id)
-    if (error) throw error
-  }, [])
+    if (error) {
+      // Still in the database, so bring it back on screen.
+      load()
+      throw error
+    }
+  }, [load])
 
   return { rows, loading, searchItems, addToList, setItemAisle, toggleChecked, updateRow, removeRow }
 }

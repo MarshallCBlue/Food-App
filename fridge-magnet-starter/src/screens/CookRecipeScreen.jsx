@@ -9,6 +9,7 @@ import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
 import { useUnitConfirm } from '../components/UnitConfirmDialog'
 import { recipeImageUrl } from '../lib/recipeImages'
+import { stockFor, formatAmount } from '../lib/units'
 
 // Shows what a recipe needs against what's actually in the inventory
 // before touching anything, cooks it (Postgres does the real
@@ -44,16 +45,18 @@ export default function CookRecipeScreen() {
 
         const { data: rows, error } = await supabase
           .from('inventory_items')
-          .select('item_id, quantity')
+          .select('item_id, quantity, unit')
           .eq('household_id', household.id)
           .in('item_id', itemIds)
         if (error) throw error
 
-        const totals = {}
+        // Every batch of each ingredient, with its unit, so amounts can be
+        // converted ("0.5 kg" counts towards "200 g").
+        const batches = {}
         for (const row of rows) {
-          totals[row.item_id] = (totals[row.item_id] || 0) + Number(row.quantity)
+          ;(batches[row.item_id] ||= []).push(row)
         }
-        if (!cancelled) setAvailability(totals)
+        if (!cancelled) setAvailability(batches)
       } catch (err) {
         if (!cancelled) setLoadError(err.message)
       }
@@ -118,9 +121,10 @@ export default function CookRecipeScreen() {
     )
   }
 
-  // After cooking: what came out of the cupboards, and what you were
-  // short of.
+  // After cooking: what came out of the cupboards, what you were short
+  // of, and anything stored in a unit that couldn't be compared.
   if (result) {
+    const unmatched = result.unmatched || []
     return (
       <div>
         <PageHeader
@@ -141,13 +145,45 @@ export default function CookRecipeScreen() {
                   <span className="fm-row__label" style={{ flex: 1 }}>
                     <span className="fm-row__name">{item.name}</span>
                   </span>
-                  <span className="fm-row__qty">
-                    {item.quantity}
-                    {item.unit ? ` ${item.unit}` : ''}
-                  </span>
+                  <span className="fm-row__qty">{formatAmount(item.quantity, item.unit)}</span>
                 </div>
               </div>
             ))}
+          </section>
+        )}
+
+        {unmatched.length > 0 && (
+          <section className="fm-group">
+            <div className="fm-rail fm-rail--warn">
+              <h2 className="fm-rail__name">Check these yourself</h2>
+              <span className="fm-rail__count">{unmatched.length}</span>
+            </div>
+            <p className="fm-note" style={{ marginBottom: 'var(--fm-space-2)' }}>
+              These are stored in a different kind of unit to the recipe, so nothing was taken off. Take off what
+              you used on the Inventory tab.
+            </p>
+            {unmatched.map((item) => (
+              <div key={item.item_id} className="fm-row">
+                <div className="fm-row__main">
+                  <span className="fm-row__label" style={{ flex: 1 }}>
+                    <span className="fm-row__name">{item.name}</span>
+                    <span className="fm-row__meta">
+                      You have {item.stock.map((batch) => formatAmount(batch.quantity, batch.unit)).join(' and ')}
+                    </span>
+                  </span>
+                  <span className="fm-row__qty">needed {formatAmount(item.quantity, item.unit)}</span>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="fm-btn fm-btn--secondary fm-btn--block"
+              style={{ marginTop: '1rem' }}
+              onClick={() => navigate('/inventory')}
+            >
+              <Icon name="fridge" />
+              Open the inventory
+            </button>
           </section>
         )}
 
@@ -172,10 +208,7 @@ export default function CookRecipeScreen() {
                   <span className="fm-row__label" style={{ flex: 1 }}>
                     <span className="fm-row__name">{item.name}</span>
                   </span>
-                  <span className="fm-row__qty">
-                    short {item.quantity}
-                    {item.unit ? ` ${item.unit}` : ''}
-                  </span>
+                  <span className="fm-row__qty">short {formatAmount(item.quantity, item.unit)}</span>
                 </label>
               </div>
             ))}
@@ -198,9 +231,11 @@ export default function CookRecipeScreen() {
             </button>
           </section>
         ) : (
-          <button type="button" className="fm-btn fm-btn--block" onClick={() => navigate('/inventory')}>
-            Done
-          </button>
+          unmatched.length === 0 && (
+            <button type="button" className="fm-btn fm-btn--block" onClick={() => navigate('/inventory')}>
+              Done
+            </button>
+          )
         )}
 
         {unitDialog}
@@ -208,27 +243,30 @@ export default function CookRecipeScreen() {
     )
   }
 
-  // Before cooking: needed against what is actually in the cupboards.
-  // The method is saved as one step per line; any "1." or "Step 2:" typed
-  // in front is dropped, because the list numbers the steps itself.
   const steps = (recipe.instructions || '')
     .split('\n')
     .map((line) => line.replace(/^\s*(step\s*\d+[.):]?|\d+[.)])\s*/i, '').trim())
     .filter(Boolean)
-  const shortCount = recipe.recipe_ingredients.filter(
-    (ri) => (availability[ri.item.id] || 0) < ri.quantity
-  ).length
+
+  // How each ingredient stands, worked out the same way the Cook button
+  // works (units converted where they can be).
+  const stock = Object.fromEntries(
+    recipe.recipe_ingredients.map((ri) => [ri.id, stockFor(ri, availability[ri.item.id] || [])])
+  )
+  const shortCount = Object.values(stock).filter((entry) => entry.status === 'short').length
+  const checkCount = Object.values(stock).filter((entry) => entry.status === 'check').length
+
+  const summary = [
+    shortCount > 0 && `Short of ${shortCount} ingredient${shortCount === 1 ? '' : 's'}`,
+    checkCount > 0 && `${checkCount} to check`,
+  ].filter(Boolean)
 
   return (
     <div>
       <PageHeader
         backTo="/recipes"
         title={recipe.name}
-        subtitle={
-          shortCount === 0
-            ? 'You have everything this needs'
-            : `Short of ${shortCount} ingredient${shortCount === 1 ? '' : 's'}`
-        }
+        subtitle={summary.length === 0 ? 'You have everything this needs' : summary.join(' · ')}
       />
 
       {recipe.image_path && (
@@ -242,21 +280,23 @@ export default function CookRecipeScreen() {
         </div>
 
         {recipe.recipe_ingredients.map((ri) => {
-          const have = availability[ri.item.id] || 0
-          const short = have < ri.quantity
+          const { have, unmatched, status } = stock[ri.id]
           return (
             <div key={ri.id} className="fm-row">
               <div className="fm-row__main">
                 <span className="fm-row__label" style={{ flex: 1 }}>
                   <span className="fm-row__name">{ri.item.name}</span>
                   <span className="fm-row__meta">
-                    needs {ri.quantity}
-                    {ri.unit ? ` ${ri.unit}` : ''}
+                    needs {formatAmount(ri.quantity, ri.unit)}
+                    {status === 'check' &&
+                      ` · you have ${unmatched.map((batch) => formatAmount(batch.quantity, batch.unit)).join(' and ')}`}
                   </span>
                 </span>
-                <span className={`fm-badge fm-badge--${short ? 'soon' : 'ok'}`}>
-                  {short ? `${have}${ri.unit ? ` ${ri.unit}` : ''} in stock` : 'in stock'}
-                </span>
+                {status === 'ok' && <span className="fm-badge fm-badge--ok">in stock</span>}
+                {status === 'check' && <span className="fm-badge fm-badge--calm">check</span>}
+                {status === 'short' && (
+                  <span className="fm-badge fm-badge--soon">{formatAmount(have, ri.unit)} in stock</span>
+                )}
               </div>
             </div>
           )

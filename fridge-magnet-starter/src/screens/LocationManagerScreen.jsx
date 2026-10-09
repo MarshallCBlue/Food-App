@@ -79,7 +79,14 @@ export default function LocationManagerScreen() {
           <LocationRow
             key={location.id}
             location={location}
-            onRename={(name) => renameLocation(location.id, name)}
+            onRename={async (name) => {
+              setError(null)
+              try {
+                await renameLocation(location.id, name)
+              } catch (err) {
+                setError(`Couldn't rename "${location.name}": ${err.message}`)
+              }
+            }}
             onDelete={() => setPendingDelete(location)}
           />
         ))}

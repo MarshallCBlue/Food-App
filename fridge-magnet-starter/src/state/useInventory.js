@@ -200,7 +200,11 @@ export function useInventory(householdId) {
         delta: -amount,
         change_event_type: 'use',
       })
-      if (error) throw error
+      if (error) {
+        // Undo the instant redraw, since nothing was actually taken off.
+        load()
+        throw error
+      }
 
       const depleted = remaining === null
 
@@ -212,7 +216,7 @@ export function useInventory(householdId) {
 
       return depleted
     },
-    []
+    [load]
   )
 
   // Clears the item entirely regardless of how much was left.
@@ -220,7 +224,12 @@ export function useInventory(householdId) {
     async (row) => {
       setRows((current) => current.filter((existing) => existing.id !== row.id))
 
-      await supabase.from('inventory_items').delete().eq('id', row.id)
+      const { error } = await supabase.from('inventory_items').delete().eq('id', row.id)
+      if (error) {
+        // Put the row back on screen, since it is still in the database.
+        load()
+        throw error
+      }
 
       await supabase.from('stock_events').insert({
         household_id: householdId,
@@ -230,10 +239,27 @@ export function useInventory(householdId) {
         event_type: 'clear',
       })
     },
-    [householdId]
+    [householdId, load]
   )
 
-  return { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem }
+  // Undo: puts an amount back where it came from — onto the same batch
+  // if it is still there, or bringing the batch back if it was used up.
+  const putBack = useCallback(
+    async ({ itemId, locationId, quantity, unit, expiresOn }) => {
+      const { error } = await supabase.rpc('put_back_inventory', {
+        target_item_id: itemId,
+        target_location_id: locationId,
+        put_quantity: quantity,
+        put_unit: unit || null,
+        put_expires_on: expiresOn || null,
+      })
+      if (error) throw error
+      await load()
+    },
+    [load]
+  )
+
+  return { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem, putBack }
 }
 
 // Used by the "add to shopping list?" prompt after an item runs out, and

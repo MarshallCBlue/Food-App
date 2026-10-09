@@ -6,6 +6,8 @@ import { useMealPlan, loadIngredientsWithStock } from '../state/useMealPlan'
 import { addOrMergeShoppingItem } from '../lib/shoppingList'
 import { toLocalDateString } from '../lib/expiry'
 import { useUnitConfirm } from '../components/UnitConfirmDialog'
+import { useErrorToast } from '../components/useErrorToast'
+import { formatAmount } from '../lib/units'
 import PageHeader from '../components/PageHeader'
 import SkeletonRows from '../components/Skeleton'
 import Toast from '../components/Toast'
@@ -53,7 +55,8 @@ export default function MealPlannerScreen() {
   const toDate = toLocalDateString(days[6])
   const today = toLocalDateString(new Date())
 
-  const { entries, loading, addEntry, removeEntry } = useMealPlan(household.id, fromDate, toDate)
+  const { entries, loading, addEntry, removeEntry, moveEntry } = useMealPlan(household.id, fromDate, toDate)
+  const [attempt, errorToast] = useErrorToast()
   const [openId, setOpenId] = useState(null)
   const [toast, setToast] = useState(null)
   const [confirmUnits, unitDialog] = useUnitConfirm()
@@ -170,8 +173,16 @@ export default function MealPlannerScreen() {
                   open={openId === entry.id}
                   onOpen={() => setOpenId(openId === entry.id ? null : entry.id)}
                   onRemove={() => {
-                    removeEntry(entry.id)
                     setOpenId(null)
+                    attempt(() => removeEntry(entry.id))
+                  }}
+                  onMove={async (changes) => {
+                    await moveEntry(entry.id, changes)
+                    setOpenId(null)
+                    // Say where it went, since a meal moved to another week
+                    // disappears from this one.
+                    const day = new Date(`${changes.plannedOn}T00:00:00`)
+                    setToast(`Moved to ${dayHeading(day)}, ${MEAL_LABEL[changes.meal].toLowerCase()}.`)
                   }}
                   confirmUnits={confirmUnits}
                   onAddedToList={(count) => {
@@ -185,6 +196,7 @@ export default function MealPlannerScreen() {
         })}
 
       {toast && <Toast message={toast} onDismiss={dismissToast} timeout={4000} />}
+      {errorToast}
       {unitDialog}
     </div>
   )
@@ -322,8 +334,34 @@ function AddMealForm({ recipes, plannedOn, onPlannedOnChange, presetRecipeId, on
 // One planned meal. Tapping it opens a panel: for a recipe, its
 // ingredients with anything short already ticked, ready to send to the
 // shopping list; for every meal, a way to remove it.
-function MealRow({ entry, householdId, open, onOpen, onRemove, confirmUnits, onAddedToList }) {
+function MealRow({ entry, householdId, open, onOpen, onRemove, onMove, confirmUnits, onAddedToList }) {
   const recipe = entry.recipe
+  const [moveDate, setMoveDate] = useState(entry.planned_on)
+  const [moveMeal, setMoveMeal] = useState(entry.meal)
+  const [moving, setMoving] = useState(false)
+
+  // Refill the "Move to" boxes from the saved meal each time it opens.
+  useEffect(() => {
+    if (open) {
+      setMoveDate(entry.planned_on)
+      setMoveMeal(entry.meal)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  async function handleMove() {
+    setError(null)
+    setMoving(true)
+    try {
+      await onMove({ plannedOn: moveDate, meal: moveMeal })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setMoving(false)
+    }
+  }
+
+  const moveUnchanged = moveDate === entry.planned_on && moveMeal === entry.meal
   const [ingredients, setIngredients] = useState(null)
   const [ticked, setTicked] = useState({})
   const [error, setError] = useState(null)
@@ -337,8 +375,9 @@ function MealRow({ entry, householdId, open, onOpen, onRemove, confirmUnits, onA
       .then((list) => {
         if (cancelled) return
         setIngredients(list)
-        // Pre-tick only what the cupboards cannot cover.
-        setTicked(Object.fromEntries(list.map((ingredient) => [ingredient.id, ingredient.have < ingredient.quantity])))
+        // Pre-tick only what is definitely short. Anything stored in a
+        // unit that can't be compared ("check") is left for you to decide.
+        setTicked(Object.fromEntries(list.map((ingredient) => [ingredient.id, ingredient.status === 'short'])))
       })
       .catch((err) => !cancelled && setError(err.message))
     return () => {
@@ -413,9 +452,12 @@ function MealRow({ entry, householdId, open, onOpen, onRemove, confirmUnits, onA
                       />
                       <span className="fm-checklist__name">{ingredient.item.name}</span>
                       <span className="fm-row__qty">
-                        {ingredient.quantity}
-                        {ingredient.unit ? ` ${ingredient.unit}` : ''}
-                        {ingredient.have >= ingredient.quantity ? ' · in stock' : ''}
+                        {formatAmount(ingredient.quantity, ingredient.unit)}
+                        {ingredient.status === 'ok' && ' · in stock'}
+                        {ingredient.status === 'check' &&
+                          ` · you have ${ingredient.unmatched
+                            .map((batch) => formatAmount(batch.quantity, batch.unit))
+                            .join(' and ')}`}
                       </span>
                     </label>
                   </li>
@@ -423,6 +465,37 @@ function MealRow({ entry, householdId, open, onOpen, onRemove, confirmUnits, onA
               </ul>
             </>
           )}
+
+          <p className="fm-panel-heading">Move to</p>
+          <div className="fm-inline">
+            <input
+              className="fm-field"
+              type="date"
+              value={moveDate}
+              onChange={(event) => setMoveDate(event.target.value)}
+              aria-label="Move to day"
+            />
+            <select
+              className="fm-field"
+              value={moveMeal}
+              onChange={(event) => setMoveMeal(event.target.value)}
+              aria-label="Move to meal"
+            >
+              {MEALS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="fm-btn fm-btn--secondary"
+              onClick={handleMove}
+              disabled={moveUnchanged || !moveDate || moving}
+            >
+              {moving ? 'Moving' : 'Move'}
+            </button>
+          </div>
 
           {error && (
             <p className="fm-error">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { stockFor } from '../lib/units'
 
 // The meals planned for one household across a range of days (the
 // planner asks for one week at a time), kept live so a meal added on one
@@ -59,14 +60,34 @@ export function useMealPlan(householdId, fromDate, toDate) {
     [householdId, load]
   )
 
-  const removeEntry = useCallback(async (id) => {
-    // Gone from the screen at once, rather than waiting on the live feed.
-    setEntries((current) => current.filter((entry) => entry.id !== id))
-    const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)
-    if (error) throw error
-  }, [])
+  const removeEntry = useCallback(
+    async (id) => {
+      // Gone from the screen at once, rather than waiting on the live feed.
+      setEntries((current) => current.filter((entry) => entry.id !== id))
+      const { error } = await supabase.from('meal_plan_entries').delete().eq('id', id)
+      if (error) {
+        // Still in the database, so bring it back on screen.
+        load()
+        throw error
+      }
+    },
+    [load]
+  )
 
-  return { entries, loading, addEntry, removeEntry }
+  // Moves a planned meal to another day and/or another meal slot.
+  const moveEntry = useCallback(
+    async (id, { plannedOn, meal }) => {
+      const { error } = await supabase
+        .from('meal_plan_entries')
+        .update({ planned_on: plannedOn, meal })
+        .eq('id', id)
+      if (error) throw error
+      await load()
+    },
+    [load]
+  )
+
+  return { entries, loading, addEntry, removeEntry, moveEntry }
 }
 
 // A recipe's ingredients next to how much of each is already in the
@@ -81,7 +102,7 @@ export async function loadIngredientsWithStock(householdId, recipeId) {
 
   const { data: stock, error: stockError } = await supabase
     .from('inventory_items')
-    .select('item_id, quantity')
+    .select('item_id, quantity, unit')
     .eq('household_id', householdId)
     .in(
       'item_id',
@@ -89,13 +110,17 @@ export async function loadIngredientsWithStock(householdId, recipeId) {
     )
   if (stockError) throw stockError
 
-  const inStock = {}
+  // Every batch of each food, so units can be converted ("0.5 kg"
+  // counts towards "200 g") the same way the Cook button does it.
+  const batches = {}
   for (const row of stock) {
-    inStock[row.item_id] = (inStock[row.item_id] || 0) + Number(row.quantity)
+    ;(batches[row.item_id] ||= []).push(row)
   }
 
+  // Each ingredient gains have, unmatched and status ('ok', 'check' or
+  // 'short') — see stockFor in lib/units.js.
   return ingredients.map((ingredient) => ({
     ...ingredient,
-    have: inStock[ingredient.item.id] || 0,
+    ...stockFor(ingredient, batches[ingredient.item.id] || []),
   }))
 }

@@ -10,6 +10,7 @@ import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
 import Icon from '../components/Icon'
 import { useUnitConfirm } from '../components/UnitConfirmDialog'
+import { useErrorToast } from '../components/useErrorToast'
 
 export default function ShoppingListScreen() {
   const { household } = useAuth()
@@ -20,6 +21,7 @@ export default function ShoppingListScreen() {
   )
   const [editingId, setEditingId] = useState(null)
   const [confirmUnits, unitDialog] = useUnitConfirm()
+  const [attempt, errorToast] = useErrorToast()
 
   const groups = useMemo(() => groupByAisle(rows), [rows])
   const ticked = rows.filter((row) => row.checked).length
@@ -35,9 +37,21 @@ export default function ShoppingListScreen() {
         }
         actions={
           <div className="fm-chips">
+            {/* Moves everything ticked into the inventory — the same
+                screen the NFC tag opens, for anyone without a tag. */}
+            {ticked > 0 && (
+              <button type="button" className="fm-chip is-on" onClick={() => navigate('/sync')}>
+                <Icon name="fridge" />
+                Put away {ticked}
+              </button>
+            )}
             <button type="button" className="fm-chip" onClick={() => navigate('/aisles')}>
               <Icon name="edit" />
               Aisles
+            </button>
+            <button type="button" className="fm-chip" onClick={() => navigate('/foods')}>
+              <Icon name="box" />
+              Foods
             </button>
           </div>
         }
@@ -69,18 +83,20 @@ export default function ShoppingListScreen() {
                 row={row}
                 categories={categories}
                 editing={editingId === row.id}
-                onToggle={() => toggleChecked(row.id, !row.checked)}
+                onToggle={() => attempt(() => toggleChecked(row.id, !row.checked))}
                 onOpen={() => setEditingId(editingId === row.id ? null : row.id)}
                 onSave={(fields, categoryId) => {
-                  updateRow(row.id, fields)
-                  if ((categoryId || null) !== (row.item.category?.id || null)) {
-                    setItemAisle(row.item.id, categoryId)
-                  }
                   setEditingId(null)
+                  attempt(async () => {
+                    await updateRow(row.id, fields)
+                    if ((categoryId || null) !== (row.item.category?.id || null)) {
+                      await setItemAisle(row.item.id, categoryId)
+                    }
+                  })
                 }}
                 onRemove={() => {
-                  removeRow(row.id)
                   setEditingId(null)
+                  attempt(() => removeRow(row.id))
                 }}
               />
             ))}
@@ -88,6 +104,7 @@ export default function ShoppingListScreen() {
         )
       })}
 
+      {errorToast}
       {unitDialog}
     </div>
   )

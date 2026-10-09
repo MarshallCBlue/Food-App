@@ -4,6 +4,7 @@ import { useCategories } from '../state/useCategories'
 import PageHeader from '../components/PageHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Icon from '../components/Icon'
+import { useErrorToast } from '../components/useErrorToast'
 
 // The order of this list is the order you walk the shop, so the shopping
 // list can be sorted to match your route round the supermarket.
@@ -13,6 +14,7 @@ export default function AisleManagerScreen() {
   const [newName, setNewName] = useState('')
   const [error, setError] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [attempt, errorToast] = useErrorToast()
 
   async function handleAdd(event) {
     event.preventDefault()
@@ -68,10 +70,10 @@ export default function AisleManagerScreen() {
             category={category}
             isFirst={index === 0}
             isLast={index === categories.length - 1}
-            onRename={(name) => renameCategory(category.id, name)}
+            onRename={(name) => attempt(() => renameCategory(category.id, name))}
             onDelete={() => setPendingDelete(category)}
-            onMoveUp={() => moveCategory(category.id, 'up')}
-            onMoveDown={() => moveCategory(category.id, 'down')}
+            onMoveUp={() => attempt(() => moveCategory(category.id, 'up'))}
+            onMoveDown={() => attempt(() => moveCategory(category.id, 'down'))}
           />
         ))}
       </section>
@@ -83,11 +85,14 @@ export default function AisleManagerScreen() {
           confirmLabel="Delete aisle"
           onCancel={() => setPendingDelete(null)}
           onConfirm={() => {
-            deleteCategory(pendingDelete.id)
+            const aisle = pendingDelete
             setPendingDelete(null)
+            attempt(() => deleteCategory(aisle.id))
           }}
         />
       )}
+
+      {errorToast}
     </div>
   )
 }

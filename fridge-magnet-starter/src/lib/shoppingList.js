@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient'
 import { guessCategoryFromName } from './categoryGuess'
+import { normaliseUnit } from './units'
 
 // Everything that puts something on the shopping list goes through here —
 // typing it in, scanning it, the "out of this, add to list?" prompt, and
@@ -44,37 +45,9 @@ async function ensureItemHasAisle(householdId, itemId) {
 }
 
 // "Grams", "gram" and "g" are the same unit; so are "tins" and "tin".
-// Anything not listed just loses a trailing "s", so "cloves" = "clove".
-const UNIT_ALIASES = {
-  gram: 'g',
-  grams: 'g',
-  kilogram: 'kg',
-  kilograms: 'kg',
-  kilo: 'kg',
-  kilos: 'kg',
-  millilitre: 'ml',
-  millilitres: 'ml',
-  milliliter: 'ml',
-  milliliters: 'ml',
-  litre: 'l',
-  litres: 'l',
-  liter: 'l',
-  liters: 'l',
-  teaspoon: 'tsp',
-  teaspoons: 'tsp',
-  tablespoon: 'tbsp',
-  tablespoons: 'tbsp',
-}
-
+// The spelling rules live in units.js, shared with cooking.
 export function sameUnit(a, b) {
   return normaliseUnit(a) === normaliseUnit(b)
-}
-
-function normaliseUnit(unit) {
-  const clean = (unit || '').trim().toLowerCase().replace(/\.$/, '')
-  if (UNIT_ALIASES[clean]) return UNIT_ALIASES[clean]
-  if (clean.length > 3 && clean.endsWith('s')) return clean.slice(0, -1)
-  return clean
 }
 
 function joinNotes(a, b) {

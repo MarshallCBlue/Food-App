@@ -63,8 +63,12 @@ export function useCategories(householdId) {
     // round-trip, so the tap feels instant on the phone that made it.
     setCategories((current) => current.filter((category) => category.id !== id))
     const { error } = await supabase.from('categories').delete().eq('id', id)
-    if (error) throw error
-  }, [])
+    if (error) {
+      // Still in the database, so bring it back on screen.
+      load()
+      throw error
+    }
+  }, [load])
 
   // Swaps display_order with the neighbouring category, which is all
   // "reorder" needs to mean for a handful of aisles.

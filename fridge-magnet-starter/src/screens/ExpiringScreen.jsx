@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { useAuth } from '../state/AuthProvider'
 import { daysUntil, urgency, toLocalDateString } from '../lib/expiry'
+import { formatAmount } from '../lib/units'
 import PageHeader from '../components/PageHeader'
 import EmptyState from '../components/EmptyState'
 import SkeletonRows from '../components/Skeleton'
@@ -19,6 +21,7 @@ const BUCKETS = [
 // you're colour-blind or the phone's in direct sun.
 export default function ExpiringScreen() {
   const { household } = useAuth()
+  const navigate = useNavigate()
   const [rows, setRows] = useState(null)
   const [error, setError] = useState(null)
 
@@ -57,7 +60,7 @@ export default function ExpiringScreen() {
       <PageHeader
         backTo="/inventory"
         title="Use these up"
-        subtitle="Anything with a date in the next week, soonest first"
+        subtitle="Anything with a date in the next week, soonest first. Tap one to use it up, move it or change its date."
       />
 
       {error && (
@@ -94,14 +97,21 @@ export default function ExpiringScreen() {
                 return (
                   <div key={row.id} className="fm-row">
                     <div className="fm-row__main">
-                      <span className="fm-row__label" style={{ flex: 1 }}>
-                        <span className="fm-row__name">{row.item.name}</span>
-                        <span className="fm-row__meta">
-                          {row.quantity}
-                          {row.unit ? ` ${row.unit}` : ''} · {row.location.name}
+                      {/* Opens this exact batch on the Inventory tab, with
+                          its Take off / Change details / All gone panel open. */}
+                      <button
+                        type="button"
+                        className="fm-row__button"
+                        onClick={() => navigate(`/inventory?open=${row.id}`)}
+                      >
+                        <span className="fm-row__label">
+                          <span className="fm-row__name">{row.item.name}</span>
+                          <span className="fm-row__meta">
+                            {formatAmount(row.quantity, row.unit)} · {row.location.name}
+                          </span>
                         </span>
-                      </span>
-                      <span className={`fm-badge fm-badge--${tone}`}>{label}</span>
+                        <span className={`fm-badge fm-badge--${tone}`}>{label}</span>
+                      </button>
                     </div>
                   </div>
                 )

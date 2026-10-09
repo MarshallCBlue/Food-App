@@ -118,7 +118,7 @@ function nameVariants(text: string): string[] {
   return [...out].filter(Boolean);
 }
 
-// Same rules as normaliseUnit() in src/lib/shoppingList.js.
+// Same rules as normaliseUnit() in src/lib/units.js.
 const UNIT_ALIASES: Record<string, string> = {
   gram: "g", grams: "g", kilogram: "kg", kilograms: "kg", kilo: "kg", kilos: "kg",
   millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml",
@@ -529,6 +529,42 @@ async function resolveRecipe(ctx: Ctx, ref: { recipe_id?: string; name?: string 
 
 // Ingredients with how much is in stock, the same sum the app's cook
 // screen shows.
+// Units, matching the database's convert_amount (and the app's
+// lib/units.js): weights convert between each other, volumes between
+// each other, and anything else ("tin", "bag", none) only matches itself.
+const UNIT_SPELLINGS: Record<string, string[]> = {
+  g: ["g", "gram", "grams", "gr", "grm"],
+  kg: ["kg", "kgs", "kilogram", "kilograms", "kilo", "kilos"],
+  oz: ["oz", "ounce", "ounces"],
+  lb: ["lb", "lbs", "pound", "pounds"],
+  ml: ["ml", "millilitre", "millilitres", "milliliter", "milliliters"],
+  cl: ["cl", "centilitre", "centilitres", "centiliter", "centiliters"],
+  l: ["l", "litre", "litres", "liter", "liters", "ltr"],
+  tsp: ["tsp", "teaspoon", "teaspoons"],
+  tbsp: ["tbsp", "tablespoon", "tablespoons", "tbs"],
+};
+const UNIT_SCALE: Record<string, [string, number]> = {
+  g: ["weight", 1], kg: ["weight", 1000], oz: ["weight", 28.3495], lb: ["weight", 453.592],
+  ml: ["volume", 1], cl: ["volume", 10], l: ["volume", 1000], tsp: ["volume", 5], tbsp: ["volume", 15],
+};
+const UNIT_LOOKUP: Record<string, string> = Object.fromEntries(
+  Object.entries(UNIT_SPELLINGS).flatMap(([unit, spellings]) => spellings.map((s) => [s, unit])),
+);
+
+function unitScale(unit: string | null | undefined): [string, number] {
+  let clean = (unit ?? "").trim().toLowerCase().replace(/\.$/, "");
+  if (UNIT_LOOKUP[clean]) clean = UNIT_LOOKUP[clean];
+  else if (clean.length > 3 && clean.endsWith("s")) clean = clean.slice(0, -1);
+  return UNIT_SCALE[clean] ?? [`count:${clean}`, 1];
+}
+
+function convertAmount(amount: number, from: string | null, to: string | null): number | null {
+  const [fromFamily, fromFactor] = unitScale(from);
+  const [toFamily, toFactor] = unitScale(to);
+  if (fromFamily !== toFamily) return null;
+  return Math.round(((amount * fromFactor) / toFactor) * 10000) / 10000;
+}
+
 async function recipeIngredients(ctx: Ctx, recipeIds: string[]) {
   if (recipeIds.length === 0) return [];
   const ingredients = check(
@@ -547,7 +583,17 @@ async function recipeIngredients(ctx: Ctx, recipeIds: string[]) {
     : [];
   return ingredients.map((ing) => {
     const batches = stock.filter((s) => s.item_id === ing.item_id);
-    const have = batches.reduce((sum, s) => sum + Number(s.quantity), 0);
+    // Only batches in a comparable unit count towards "have", converted
+    // into the recipe's unit. The rest are listed for the person to check.
+    let have = 0;
+    const unmatched: Row[] = [];
+    for (const batch of batches) {
+      const converted = convertAmount(Number(batch.quantity), batch.unit, ing.unit);
+      if (converted === null) unmatched.push(batch);
+      else have += converted;
+    }
+    have = Math.round(have * 10000) / 10000;
+    const enough = have >= Number(ing.quantity);
     return {
       recipe_id: ing.recipe_id,
       food_id: ing.item_id,
@@ -556,7 +602,13 @@ async function recipeIngredients(ctx: Ctx, recipeIds: string[]) {
       unit: ing.unit,
       have,
       stock_units: [...new Set(batches.map((s) => s.unit ?? null))],
-      short: have < Number(ing.quantity),
+      // Not enough in comparable units, and nothing else to check.
+      short: !enough && unmatched.length === 0,
+      // Not enough in comparable units, but stored in another unit too
+      // ("1 bag" against "200 g"), so it may well be enough.
+      check_yourself: !enough && unmatched.length > 0
+        ? unmatched.map((b) => amount(Number(b.quantity), b.unit)).join(" and ")
+        : undefined,
     };
   });
 }
@@ -1438,12 +1490,14 @@ function buildServer(ctx: Ctx): McpServer {
           recipes: recipes.map((r) => {
             const mine = ingredients.filter((i) => i.recipe_id === r.id);
             const short = mine.filter((i) => i.short);
+            const toCheck = mine.filter((i) => i.check_yourself);
             return {
               recipe_id: r.id,
               name: r.name,
               ingredients: mine.length,
               short_of: short.map((i) => i.name),
-              can_make_now: mine.length > 0 && short.length === 0,
+              check_with_person: toCheck.length ? toCheck.map((i) => `${i.name} (have ${i.check_yourself})`) : undefined,
+              can_make_now: mine.length > 0 && short.length === 0 && toCheck.length === 0,
             };
           }),
         });
@@ -1468,6 +1522,7 @@ function buildServer(ctx: Ctx): McpServer {
           in_stock: i.have,
           stock_units: i.stock_units,
           short: i.short,
+          check_with_person: i.check_yourself ? `Have ${i.check_yourself} in another unit, which may cover it.` : undefined,
         })),
         method: (check(detail) as Row)?.instructions ?? null,
         planned: check(planned),
@@ -1493,14 +1548,29 @@ function buildServer(ctx: Ctx): McpServer {
       if (!recipe) return reply(question);
       const result = check(await ctx.db.rpc("cook_recipe", { target_recipe_id: recipe.id })) as Row;
       const short = (result.short as Row[]).map((s) => ({ food_id: s.item_id, name: s.name, short_by: amount(s.quantity, s.unit), quantity: Number(s.quantity), unit: s.unit }));
+      // Stock kept in a unit that can't be compared with the recipe's
+      // ("1 bag" against "200 g"): nothing was taken from it.
+      const notTaken = ((result.unmatched ?? []) as Row[]).map((u) => ({
+        food_id: u.item_id,
+        name: u.name,
+        recipe_needed: amount(u.quantity, u.unit),
+        in_stock: (u.stock as Row[]).map((b) => amount(Number(b.quantity), b.unit)).join(" and "),
+      }));
+      const hints = [
+        short.length
+          ? "Offer to add the short items to the shopping list (add_to_shopping_list with their food_id, quantity and unit)."
+          : null,
+        notTaken.length
+          ? "Some stock is in a different kind of unit, so nothing was taken from it. Ask how much they used of each, then use update_stock or use_stock."
+          : null,
+      ].filter(Boolean);
       return reply({
         status: "cooked",
         recipe: recipe.name,
         used: (result.consumed as Row[]).map((c) => `${c.name}: ${amount(c.quantity, c.unit)}`),
         short,
-        hint: short.length
-          ? "Offer to add the short items to the shopping list (add_to_shopping_list with their food_id, quantity and unit)."
-          : undefined,
+        not_taken_different_unit: notTaken.length ? notTaken : undefined,
+        hint: hints.length ? hints.join(" ") : undefined,
       });
     }),
   );
@@ -1565,10 +1635,13 @@ function buildServer(ctx: Ctx): McpServer {
       const lineRows = check(lines) as Row[];
 
       const needs = [...totals.values()].map((t) => {
-        const sameUnit = (r: Row) => r.item_id === t.food_id && normaliseUnit(r.unit) === normaliseUnit(t.unit);
-        const otherUnit = (r: Row) => r.item_id === t.food_id && normaliseUnit(r.unit) !== normaliseUnit(t.unit);
-        const have = stockRows.filter(sameUnit).reduce((s, r) => s + Number(r.quantity), 0);
-        const listed = lineRows.filter(sameUnit).reduce((s, r) => s + Number(r.quantity), 0);
+        // Comparable units are converted into the recipe's unit ("0.5 kg"
+        // counts towards "200 g"); anything else is left for the person.
+        const inUnit = (r: Row) => convertAmount(Number(r.quantity), r.unit, t.unit);
+        const sameUnit = (r: Row) => r.item_id === t.food_id && inUnit(r) !== null;
+        const otherUnit = (r: Row) => r.item_id === t.food_id && inUnit(r) === null;
+        const have = stockRows.filter(sameUnit).reduce((s, r) => s + (inUnit(r) as number), 0);
+        const listed = lineRows.filter(sameUnit).reduce((s, r) => s + (inUnit(r) as number), 0);
         const toBuy = Math.max(0, Math.round((t.need - have - listed) * 1000) / 1000);
         const mismatched = [...stockRows.filter(otherUnit), ...lineRows.filter(otherUnit)];
         return {

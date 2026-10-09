@@ -155,7 +155,7 @@ export default function SyncScreen() {
   if (rows === null) {
     return (
       <div>
-        <PageHeader title="Putting the shopping away" />
+        <PageHeader backTo="/" title="Putting the shopping away" />
         <SkeletonRows rows={4} />
       </div>
     )
@@ -164,11 +164,11 @@ export default function SyncScreen() {
   if (rows.length === 0) {
     return (
       <div>
-        <PageHeader title="Nothing to move" />
+        <PageHeader backTo="/" title="Nothing to move" />
         <EmptyState
           icon="basket"
           title="Nothing is ticked off"
-          body="Tick things off the shopping list as they go in the trolley, then tap the fridge tag when you get home."
+          body="Tick things off the shopping list as they go in the trolley, then tap Put away on the list (or your fridge tag) when you get home."
           action={
             <button type="button" className="fm-btn" style={{ marginTop: '0.5rem' }} onClick={() => navigate('/')}>
               Open the shopping list
@@ -185,6 +185,7 @@ export default function SyncScreen() {
   return (
     <div>
       <PageHeader
+        backTo="/"
         title="Putting the shopping away"
         subtitle={`${rows.length} ticked item${rows.length === 1 ? '' : 's'} ready to move into the inventory`}
       />

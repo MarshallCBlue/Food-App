@@ -1483,3 +1483,14 @@ select.fm-field {
   flex: 1;
   min-width: 0;
 }
+
+/* The narrow "Usual unit" box beside "Usual place" on Saved foods */
+.fm-inline > .fm-label--unit {
+  flex: 0 0 7rem;
+}
+
+/* An inventory row opened from "Use these up" scrolls into view
+   clear of the sticky top bar */
+.fm-row--target {
+  scroll-margin-top: calc(var(--fm-header-h, 3.5rem) + var(--fm-space-3));
+}

@@ -73,7 +73,7 @@ export default function InventoryRow({ row, locations, editing, onOpen, onTakeSo
   const pressing = expiry && expiry.tier !== 'week'
 
   return (
-    <div className="fm-row">
+    <div className="fm-row fm-row--target" id={`inventory-${row.id}`}>
       <div className="fm-row__main">
         <button type="button" className="fm-row__button" onClick={onOpen} aria-expanded={editing}>
           <span className="fm-row__label">
@@ -103,7 +103,7 @@ export default function InventoryRow({ row, locations, editing, onOpen, onTakeSo
               onChange={(event) => setAmount(event.target.value)}
               aria-label="Amount to take off"
             />
-            <button type="button" className="fm-btn" disabled={!amount || busy} onClick={handleTakeOff}>
+            <button type="button" className="fm-btn" disabled={!(Number(amount) > 0) || busy} onClick={handleTakeOff}>
               Take off
             </button>
           </div>

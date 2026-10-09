@@ -1,0 +1,11 @@
+-- Recorded from the live database on 2026-10-09: this change was applied
+-- to Supabase on 17 Sep 2026 but never saved here. It is already live.
+-- (The function it locks down was later removed altogether by
+-- 20260928130000_remove_metadata_household_join.sql.)
+--
+-- handle_invited_user is only ever meant to run as the auth.users trigger
+-- itself, which doesn't need (or check) any EXECUTE grant on the calling
+-- role — the default grant to anon/authenticated it got on creation was
+-- unnecessary exposure, consistent with how every other function in this
+-- project is locked down to just what actually needs to call it.
+revoke all on function public.handle_invited_user() from public, anon, authenticated;

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useLocations } from '../state/useLocations'
 import { useInventory, addItemToShoppingList } from '../state/useInventory'
 import { daysUntil } from '../lib/expiry'
+import { formatAmount } from '../lib/units'
 import AddInventoryItemForm from '../components/AddInventoryItemForm'
 import InventoryRow from '../components/InventoryRow'
 import PageHeader from '../components/PageHeader'
@@ -12,15 +13,22 @@ import SkeletonRows from '../components/Skeleton'
 import Toast from '../components/Toast'
 import Icon from '../components/Icon'
 import { useUnitConfirm } from '../components/UnitConfirmDialog'
+import { useErrorToast } from '../components/useErrorToast'
 
 export default function InventoryScreen() {
   const { household } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { locations } = useLocations(household.id)
-  const { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem } = useInventory(household.id)
+  const { rows, loading, searchItems, addToInventory, takeSome, clearAll, updateItem, putBack } = useInventory(
+    household.id
+  )
   const [editingId, setEditingId] = useState(null)
-  const [justEmptied, setJustEmptied] = useState(null)
+  // The last thing taken out, kept so it can be undone, or added to the
+  // shopping list if it ran out.
+  const [lastChange, setLastChange] = useState(null)
   const [confirmUnits, unitDialog] = useUnitConfirm()
+  const [attempt, errorToast] = useErrorToast()
 
   const groups = useMemo(() => groupByLocation(rows), [rows])
 
@@ -31,31 +39,73 @@ export default function InventoryScreen() {
     [rows]
   )
 
+  // Arriving from "Use these up" with ?open=<id> in the address: open
+  // that item and scroll to it, then tidy the address back up.
+  const openId = searchParams.get('open')
+  useEffect(() => {
+    if (!openId || loading) return
+    if (rows.some((row) => row.id === openId)) {
+      setEditingId(openId)
+      requestAnimationFrame(() =>
+        document.getElementById(`inventory-${openId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      )
+    }
+    setSearchParams({}, { replace: true })
+  }, [openId, loading, rows, setSearchParams])
+
+  // Notes what just left the inventory: enough to put it back exactly
+  // where it was (same place, unit and date).
+  function remember(row, removed, emptied) {
+    setLastChange({
+      itemId: row.item.id,
+      unit: row.unit,
+      emptied,
+      message: emptied ? `Out of ${row.item.name}.` : `Took ${formatAmount(removed, row.unit)} off ${row.item.name}.`,
+      putBack: {
+        itemId: row.item.id,
+        locationId: row.location.id,
+        quantity: removed,
+        unit: row.unit,
+        expiresOn: row.expires_on,
+      },
+    })
+  }
+
   async function handleTakeSome(row, amount) {
+    // Taking off more than is there only ever removes what was there.
+    const removed = Math.min(amount, Number(row.quantity))
     const depleted = await takeSome(row, amount)
     setEditingId(null)
-    if (depleted) setJustEmptied({ itemId: row.item.id, name: row.item.name, unit: row.unit })
+    remember(row, removed, depleted)
   }
 
   async function handleClearAll(row) {
     await clearAll(row)
     setEditingId(null)
-    setJustEmptied({ itemId: row.item.id, name: row.item.name, unit: row.unit })
+    remember(row, Number(row.quantity), true)
   }
 
   // Saves the edited details. Setting the amount to 0 counts as "all
-  // gone", so it offers to put the item back on the shopping list.
+  // gone", so it can be undone or added to the shopping list.
   async function handleSave(row, changes) {
     const status = await updateItem(row, changes)
     setEditingId(null)
-    if (status === 'removed') setJustEmptied({ itemId: row.item.id, name: row.item.name, unit: row.unit })
+    if (status === 'removed') remember(row, Number(row.quantity), true)
+  }
+
+  async function handleUndo() {
+    const change = lastChange
+    setLastChange(null)
+    await attempt(() => putBack(change.putBack))
   }
 
   async function handleAddToShoppingList() {
-    const item = justEmptied
-    setJustEmptied(null)
-    await addItemToShoppingList(household.id, item.itemId, item.unit, 1, confirmUnits)
+    const change = lastChange
+    setLastChange(null)
+    await attempt(() => addItemToShoppingList(household.id, change.itemId, change.unit, 1, confirmUnits))
   }
+
+  const dismissChange = useCallback(() => setLastChange(null), [])
 
   return (
     <div>
@@ -82,6 +132,10 @@ export default function InventoryScreen() {
               <Icon name="edit" />
               Places
             </button>
+            <button type="button" className="fm-chip" onClick={() => navigate('/foods')}>
+              <Icon name="box" />
+              Foods
+            </button>
           </div>
         }
       />
@@ -94,7 +148,7 @@ export default function InventoryScreen() {
         <EmptyState
           icon="fridge"
           title="Nothing in the inventory yet"
-          body="Add something above, or tick items off your shopping list and tap the fridge tag to move them all in at once."
+          body="Add something above, or tick items off your shopping list and tap Put away to move them all in at once."
         />
       )}
 
@@ -119,15 +173,18 @@ export default function InventoryScreen() {
         </section>
       ))}
 
-      {justEmptied && (
+      {lastChange && (
         <Toast
-          message={`Out of ${justEmptied.name}.`}
-          actionLabel="Add to list"
-          onAction={handleAddToShoppingList}
-          onDismiss={() => setJustEmptied(null)}
+          message={lastChange.message}
+          actions={[
+            { label: 'Undo', onClick: handleUndo },
+            ...(lastChange.emptied ? [{ label: 'Add to list', onClick: handleAddToShoppingList }] : []),
+          ]}
+          onDismiss={dismissChange}
         />
       )}
 
+      {errorToast}
       {unitDialog}
     </div>
   )

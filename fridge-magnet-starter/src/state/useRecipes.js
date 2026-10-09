@@ -167,11 +167,15 @@ export function useRecipes(householdId) {
       const imagePath = recipes.find((recipe) => recipe.id === recipeId)?.image_path
       setRecipes((current) => current.filter((recipe) => recipe.id !== recipeId))
       const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
-      if (error) throw error
+      if (error) {
+        // Still in the database, so bring it back on screen.
+        load()
+        throw error
+      }
       // The photo goes too, so storage doesn't fill up with orphans.
       await deleteRecipeImage(imagePath)
     },
-    [recipes]
+    [recipes, load]
   )
 
   const loadRecipeWithIngredients = useCallback(async (recipeId) => {
