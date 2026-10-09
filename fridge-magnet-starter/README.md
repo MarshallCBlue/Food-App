@@ -189,6 +189,29 @@ their next invocation. Once both are set, visit the Household screen on
 your phone (installed to the home screen first — that's the whole point
 of Step 9's first half) and tap "Turn on reminders".
 
+### Chat with Claude (the Claude connector)
+
+You can run the list and the cupboards by chatting to Claude: "we're out
+of eggs", "I used 200 g of rice", "what needs eating this week?". Claude
+uses the foods, aisles and storage places the app already knows, and asks
+when something is unclear rather than guessing.
+
+How it works: `supabase/functions/fridge-magnet-mcp` is a small server
+that gives Claude a menu of actions (20 of them). Claude picks from the
+menu; the server does the work through the `assistant_*` database
+functions in `supabase/migrations/20261008150000_claude_connector.sql`.
+
+The connector's address ends in a secret key. Anyone with the full
+address can use it, so keep it private. Only a fingerprint of the key is
+stored, in the `assistant_keys` table.
+
+- **Make a key** (Supabase SQL editor):
+  `select public.assistant_create_key('<household id>', 'Claude');`
+- **Revoke a key** (Supabase SQL editor):
+  `update public.assistant_keys set revoked_at = now() where label = 'Claude';`
+- **Check it works**: open the full address in a browser. It should say
+  "Fridge Magnet for Claude is running".
+
 ## How it looks
 
 The whole look of the app is decided in two places, and nowhere else:
