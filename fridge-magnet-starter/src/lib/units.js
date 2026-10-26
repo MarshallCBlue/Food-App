@@ -78,8 +78,54 @@ export function stockFor(ingredient, batches) {
   return { have, unmatched, status }
 }
 
+// ── Packs ───────────────────────────────────────────────────────────
+// Things that come in a container you dip into over weeks (a jar of
+// coffee, a bag of rice) are kept as "1 pack" and marked down by how full
+// the open one looks, rather than by weighing out grams.
+const PACK_UNITS = new Set([
+  'pack', 'packet', 'jar', 'bag', 'box', 'bottle', 'tub', 'tin', 'can',
+  'carton', 'pouch', 'tube', 'pot', 'bar', 'loaf', 'block', 'sack',
+])
+
+export function isPackUnit(unit) {
+  return PACK_UNITS.has(normaliseUnit(unit))
+}
+
+// How full the open pack is, from 0 to 1. 2.5 jars = one unopened jar
+// plus one half full, so the open one is 0.5. A whole number means the
+// one in use still counts as full.
+export function openPackFill(quantity) {
+  const number = Number(quantity)
+  if (number <= 0) return 0
+  const whole = Math.ceil(number - 1e-9) - 1
+  return Math.round((number - whole) * 100) / 100
+}
+
+// The amount left after setting the open pack to a new fill level.
+export function amountAtFill(quantity, fill) {
+  const whole = Math.ceil(Number(quantity) - 1e-9) - 1
+  return Math.round((whole + fill) * 100) / 100
+}
+
+const FRACTIONS = { 0.25: '¼', 0.5: '½', 0.75: '¾' }
+
+// "1½ jars", "¾ jar", "2 jars". Falls back to decimals for anything that
+// isn't a quarter.
+function formatPacks(number, unit) {
+  const whole = Math.floor(number)
+  const part = Math.round((number - whole) * 100) / 100
+  const fraction = FRACTIONS[part]
+  if (part !== 0 && !fraction) return null
+  const text = whole === 0 ? fraction : `${whole}${fraction || ''}`
+  return `${text} ${unit}`
+}
+
 // "2.5 kg", "3 tins", "4" — for showing amounts in sentences.
 export function formatAmount(quantity, unit) {
+  if (unit && isPackUnit(unit)) {
+    const packs = formatPacks(Number(quantity), unit)
+    if (packs) return packs
+  }
   const number = Number(quantity)
   const display = Number.isInteger(number) ? String(number) : number.toFixed(2).replace(/\.?0+$/, '')
   return unit ? `${display} ${unit}` : display

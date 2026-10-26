@@ -1,11 +1,30 @@
 import { useEffect, useState } from 'react'
 import { daysUntil, urgency, formatShortDate } from '../lib/expiry'
+import { formatAmount, isPackUnit, normaliseUnit, openPackFill, amountAtFill } from '../lib/units'
 import Icon from './Icon'
 
-// One thing in the inventory. Tapping it opens a panel with three jobs:
-// take some off quickly, change its details (amount, unit, place, date),
-// or mark it all gone.
-export default function InventoryRow({ row, locations, editing, onOpen, onTakeSome, onClearAll, onSave }) {
+// The fill levels offered for an open pack, fullest first.
+const FILL_LEVELS = [
+  { fill: 0.75, label: '¾' },
+  { fill: 0.5, label: '½' },
+  { fill: 0.25, label: '¼' },
+  { fill: 0, label: 'Empty' },
+]
+
+// One thing in the inventory. Tapping it opens a panel with four jobs:
+// take some off quickly (or, for packs, say how full the open one is),
+// flag it as running low, change its details (amount, unit, place,
+// date), or mark it all gone.
+export default function InventoryRow({
+  row,
+  locations,
+  editing,
+  onOpen,
+  onTakeSome,
+  onClearAll,
+  onSave,
+  onRunningLow,
+}) {
   const [amount, setAmount] = useState('')
   const [draft, setDraft] = useState(() => draftFrom(row))
   const [busy, setBusy] = useState(false)
@@ -64,7 +83,17 @@ export default function InventoryRow({ row, locations, editing, onOpen, onTakeSo
     )
   }
 
+  // Setting the open pack to a lower level is just "take some off" with
+  // the amount worked out for you, so it gets the same undo as typing it.
+  function handleSetFill(fill) {
+    const removed = Math.round((Number(row.quantity) - amountAtFill(row.quantity, fill)) * 100) / 100
+    if (removed > 0) run(() => onTakeSome(removed))
+  }
+
   const unchanged = JSON.stringify(draft) === JSON.stringify(draftFrom(row))
+  const isPack = isPackUnit(row.unit)
+  const fill = isPack ? openPackFill(row.quantity) : null
+  const packName = isPack ? normaliseUnit(row.unit) : ''
 
   // A date only earns a coloured badge once it is close. Anything further
   // out is just a quiet line of text, so the screen is not a wall of
@@ -85,28 +114,58 @@ export default function InventoryRow({ row, locations, editing, onOpen, onTakeSo
           <span className="fm-row__qty">
             {pressing && <span className={`fm-badge fm-badge--${expiry.tone}`}>{expiry.label}</span>}
             {pressing && ' '}
-            {formatQuantity(row.quantity, row.unit)}
+            {formatAmount(row.quantity, row.unit)}
           </span>
         </button>
       </div>
 
       {editing && (
         <div className="fm-row__panel">
-          <div className="fm-inline">
-            <input
-              className="fm-field"
-              type="number"
-              min="0"
-              step="any"
-              placeholder={row.unit ? `Take off (${row.unit})` : 'Take off'}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              aria-label="Amount to take off"
-            />
-            <button type="button" className="fm-btn" disabled={!(Number(amount) > 0) || busy} onClick={handleTakeOff}>
-              Take off
-            </button>
-          </div>
+          {isPack ? (
+            <>
+              <p className="fm-panel-heading">How full is the open {packName}?</p>
+              <div className="fm-fill" role="group" aria-label={`How full is the open ${packName}?`}>
+                {FILL_LEVELS.map((level) => (
+                  <button
+                    key={level.fill}
+                    type="button"
+                    className={`fm-btn fm-btn--secondary fm-btn--sm${fill === level.fill ? ' is-on' : ''}`}
+                    aria-pressed={fill === level.fill}
+                    disabled={busy || fill <= level.fill}
+                    onClick={() => handleSetFill(level.fill)}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="fm-inline">
+              <input
+                className="fm-field"
+                type="number"
+                min="0"
+                step="any"
+                placeholder={row.unit ? `Take off (${row.unit})` : 'Take off'}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                aria-label="Amount to take off"
+              />
+              <button type="button" className="fm-btn" disabled={!(Number(amount) > 0) || busy} onClick={handleTakeOff}>
+                Take off
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="fm-btn fm-btn--secondary fm-btn--block"
+            disabled={busy}
+            onClick={() => run(onRunningLow)}
+          >
+            <Icon name="basket" />
+            Running low: add to list
+          </button>
 
           <p className="fm-panel-heading">Change details</p>
 
@@ -199,8 +258,3 @@ function draftFrom(row) {
   }
 }
 
-function formatQuantity(quantity, unit) {
-  const number = Number(quantity)
-  const display = Number.isInteger(number) ? number.toString() : number.toFixed(2).replace(/\.?0+$/, '')
-  return unit ? `${display} ${unit}` : display
-}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../state/AuthProvider'
 import { useLocations } from '../state/useLocations'
-import { useInventory, addItemToShoppingList } from '../state/useInventory'
+import { useInventory, addItemToShoppingList, flagRunningLow } from '../state/useInventory'
 import { daysUntil } from '../lib/expiry'
 import { formatAmount } from '../lib/units'
 import AddInventoryItemForm from '../components/AddInventoryItemForm'
@@ -27,6 +27,8 @@ export default function InventoryScreen() {
   // The last thing taken out, kept so it can be undone, or added to the
   // shopping list if it ran out.
   const [lastChange, setLastChange] = useState(null)
+  // A plain message with no buttons, e.g. after "Running low".
+  const [notice, setNotice] = useState(null)
   const [confirmUnits, unitDialog] = useUnitConfirm()
   const [attempt, errorToast] = useErrorToast()
 
@@ -72,6 +74,7 @@ export default function InventoryScreen() {
   }
 
   async function handleTakeSome(row, amount) {
+    setNotice(null)
     // Taking off more than is there only ever removes what was there.
     const removed = Math.min(amount, Number(row.quantity))
     const depleted = await takeSome(row, amount)
@@ -105,7 +108,22 @@ export default function InventoryScreen() {
     await attempt(() => addItemToShoppingList(household.id, change.itemId, change.unit, 1, confirmUnits))
   }
 
+  // Still some left, but worth buying more: add one to the shopping list.
+  // Errors are shown underneath the button by the row itself.
+  async function handleRunningLow(row) {
+    const result = await flagRunningLow(household.id, row.item.id, row.unit, confirmUnits)
+    if (result === 'cancelled') return
+    setEditingId(null)
+    setLastChange(null)
+    setNotice(
+      result === 'already'
+        ? `${row.item.name} is already on the shopping list.`
+        : `Added ${row.item.name} to the shopping list.`
+    )
+  }
+
   const dismissChange = useCallback(() => setLastChange(null), [])
+  const dismissNotice = useCallback(() => setNotice(null), [])
 
   return (
     <div>
@@ -168,6 +186,7 @@ export default function InventoryScreen() {
               onTakeSome={(amount) => handleTakeSome(row, amount)}
               onClearAll={() => handleClearAll(row)}
               onSave={(changes) => handleSave(row, changes)}
+              onRunningLow={() => handleRunningLow(row)}
             />
           ))}
         </section>
@@ -183,6 +202,8 @@ export default function InventoryScreen() {
           onDismiss={dismissChange}
         />
       )}
+
+      {notice && !lastChange && <Toast message={notice} onDismiss={dismissNotice} timeout={4000} />}
 
       {errorToast}
       {unitDialog}

@@ -841,6 +841,17 @@ select.fm-field {
   box-shadow: var(--fm-shadow-lifted);
 }
 
+/* Used by the two "add item" forms: the list takes up its own room and
+   pushes the boxes below it down, instead of hovering over the aisle or
+   place picker */
+.fm-suggest--inline {
+  position: static;
+  margin-top: 4px;
+  max-height: 14rem;
+  overflow-y: auto;
+  box-shadow: none;
+}
+
 .fm-suggest__item {
   display: block;
   width: 100%;
@@ -1493,4 +1504,23 @@ select.fm-field {
    clear of the sticky top bar */
 .fm-row--target {
   scroll-margin-top: calc(var(--fm-header-h, 3.5rem) + var(--fm-space-3));
+}
+
+/* The ¾ / ½ / ¼ / Empty buttons for an open pack: four equal buttons in
+   a row. Levels fuller than the pack is now are greyed out, since a jar
+   never fills itself back up. */
+.fm-fill {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--fm-space-2);
+}
+
+.fm-fill .fm-btn.is-on {
+  border-color: var(--fm-brand);
+  background: var(--fm-brand-tint);
+  color: var(--fm-brand);
+}
+
+.fm-fill .fm-btn.is-on:disabled {
+  opacity: 1;
 }

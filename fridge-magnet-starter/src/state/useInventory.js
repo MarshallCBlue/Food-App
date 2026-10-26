@@ -269,3 +269,20 @@ export function useInventory(householdId) {
 export async function addItemToShoppingList(householdId, itemId, unit, quantity = 1, confirmUnits) {
   return addOrMergeShoppingItem(householdId, { itemId, quantity, unit }, confirmUnits)
 }
+
+// The "Running low" button: puts one on the shopping list while there is
+// still some left. Tapping it twice shouldn't mean buying two, so if the
+// food is already on the list (and not yet ticked off) nothing is added
+// and 'already' comes back instead.
+export async function flagRunningLow(householdId, itemId, unit, confirmUnits) {
+  const { data: onList, error } = await supabase
+    .from('shopping_list_items')
+    .select('id')
+    .eq('household_id', householdId)
+    .eq('item_id', itemId)
+    .eq('checked', false)
+    .limit(1)
+  if (error) throw error
+  if (onList.length > 0) return 'already'
+  return addOrMergeShoppingItem(householdId, { itemId, quantity: 1, unit, note: 'Running low' }, confirmUnits)
+}

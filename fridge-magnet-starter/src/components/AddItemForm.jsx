@@ -94,7 +94,7 @@ export default function AddItemForm({ categories, searchItems, onAdd }) {
           aria-label="Item name"
         />
         {suggestions.length > 0 && (
-          <ul className="fm-suggest">
+          <ul className="fm-suggest fm-suggest--inline">
             {suggestions.map((item) => (
               <li key={item.id}>
                 <button type="button" className="fm-suggest__item" onClick={() => pickSuggestion(item)}>
