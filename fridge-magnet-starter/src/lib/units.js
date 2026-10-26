@@ -81,9 +81,10 @@ export function stockFor(ingredient, batches) {
 // ── Packs ───────────────────────────────────────────────────────────
 // Things that come in a container you dip into over weeks (a jar of
 // coffee, a bag of rice) are kept as "1 pack" and marked down by how full
-// the open one looks, rather than by weighing out grams.
+// the open one looks, rather than by weighing out grams. Tins and cans
+// are left out on purpose: they get used in one go, so they're counted.
 const PACK_UNITS = new Set([
-  'pack', 'packet', 'jar', 'bag', 'box', 'bottle', 'tub', 'tin', 'can',
+  'pack', 'packet', 'jar', 'bag', 'box', 'bottle', 'tub',
   'carton', 'pouch', 'tube', 'pot', 'bar', 'loaf', 'block', 'sack',
 ])
 
