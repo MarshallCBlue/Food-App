@@ -11,6 +11,10 @@ import Icon from '../components/Icon'
 // Where tapping the fridge's NFC tag lands. Shows what's about to move,
 // waits for confirmation, then does it all in one atomic database call —
 // either every checked item transfers, or none do.
+//
+// Each item has a tick box, ticked to start with. Untick anything that
+// was bought but doesn't need tracking: it still comes off the shopping
+// list, it just doesn't go into the inventory.
 export default function SyncScreen() {
   const [searchParams] = useSearchParams()
   const tagCode = searchParams.get('t')
@@ -20,9 +24,11 @@ export default function SyncScreen() {
 
   const [rows, setRows] = useState(null)
   const [overrides, setOverrides] = useState({})
+  // Ids of the list lines unticked here, i.e. left out of the inventory.
+  const [skipped, setSkipped] = useState(() => new Set())
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState(null) // { syncRunId, moved }
+  const [result, setResult] = useState(null) // { syncRunId, moved, skipped }
   const [undone, setUndone] = useState(false)
 
   const tagMismatch = Boolean(tagCode) && tagCode !== household.secret_code
@@ -60,6 +66,7 @@ export default function SyncScreen() {
       const { data: syncRunId, error: rpcError } = await supabase.rpc('sync_shopping_list_to_inventory', {
         location_overrides: overrides,
         target_household_id: household.id,
+        skip_ids: Array.from(skipped),
       })
       if (rpcError) throw rpcError
 
@@ -70,17 +77,26 @@ export default function SyncScreen() {
       // what we asked it to do.
       const { data: run, error: fetchError } = await supabase
         .from('sync_runs')
-        .select('moved_items')
+        .select('moved_items, skipped_items')
         .eq('id', syncRunId)
         .single()
       if (fetchError) throw fetchError
 
-      setResult({ syncRunId, moved: run.moved_items })
+      setResult({ syncRunId, moved: run.moved_items, skipped: run.skipped_items || [] })
     } catch (err) {
       setError(err.message)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function toggleSkipped(rowId) {
+    setSkipped((current) => {
+      const next = new Set(current)
+      if (next.has(rowId)) next.delete(rowId)
+      else next.add(rowId)
+      return next
+    })
   }
 
   async function handleUndo() {
@@ -102,14 +118,10 @@ export default function SyncScreen() {
       <div>
         <PageHeader
           title={undone ? 'Put back' : 'Moved in'}
-          subtitle={
-            undone
-              ? 'Everything is back on the shopping list.'
-              : `${result.moved.length} item${result.moved.length === 1 ? '' : 's'} went into the inventory.`
-          }
+          subtitle={undone ? 'Everything is back on the shopping list.' : resultSummary(result)}
         />
 
-        {!undone && (
+        {!undone && result.moved.length > 0 && (
           <section className="fm-group">
             <div className="fm-rail">
               <h2 className="fm-rail__name">Now in the inventory</h2>
@@ -179,62 +191,76 @@ export default function SyncScreen() {
     )
   }
 
-  const missingLocation = rows.filter((row) => !row.item.default_location_id)
+  // Only items actually going in need a place.
+  const included = rows.filter((row) => !skipped.has(row.id))
+  const missingLocation = included.filter((row) => !row.item.default_location_id)
   const canConfirm = missingLocation.every((row) => overrides[row.id])
+  const leftOut = rows.length - included.length
 
   return (
     <div>
       <PageHeader
         backTo="/"
         title="Putting the shopping away"
-        subtitle={`${rows.length} ticked item${rows.length === 1 ? '' : 's'} ready to move into the inventory`}
+        subtitle="Untick anything that doesn't need to go in the inventory. It still comes off the list."
       />
 
       {tagMismatch && (
         <p className="fm-note fm-panel" style={{ marginBottom: '1rem' }}>
-          This tag does not look like it belongs to {household.name}. It can only ever move your own
-          household's list, so it is safe to carry on if that is expected.
+          This tag does not look like it belongs to {household.name}. It can only ever move your own household's list,
+          so it is safe to carry on if that is expected.
         </p>
       )}
 
       <section className="fm-group">
         <div className="fm-rail">
           <h2 className="fm-rail__name">Moving in</h2>
-          <span className="fm-rail__count">{rows.length}</span>
+          <span className="fm-rail__count">
+            {included.length} of {rows.length}
+          </span>
         </div>
 
-        {rows.map((row) => (
-          <div key={row.id} className="fm-row">
-            <div className="fm-row__main">
-              <span className="fm-row__label" style={{ flex: 1 }}>
-                <span className="fm-row__name">{row.item.name}</span>
-              </span>
-              <span className="fm-row__qty">
-                {row.quantity}
-                {row.unit ? ` ${row.unit}` : ''}
-              </span>
+        {rows.map((row) => {
+          const isSkipped = skipped.has(row.id)
+          return (
+            <div key={row.id} className={`fm-row${isSkipped ? ' fm-row--done' : ''}`}>
+              <label className="fm-row__main" style={{ cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  className="fm-check"
+                  checked={!isSkipped}
+                  onChange={() => toggleSkipped(row.id)}
+                  aria-label={`Put ${row.item.name} in the inventory`}
+                />
+                <span className="fm-row__label" style={{ flex: 1 }}>
+                  <span className="fm-row__name">{row.item.name}</span>
+                  {isSkipped && <span className="fm-row__meta">Off the list, not into the inventory</span>}
+                </span>
+                <span className="fm-row__qty">
+                  {row.quantity}
+                  {row.unit ? ` ${row.unit}` : ''}
+                </span>
+              </label>
+              {!isSkipped && !row.item.default_location_id && (
+                <div style={{ paddingBottom: '0.75rem' }}>
+                  <select
+                    className="fm-field"
+                    value={overrides[row.id] || ''}
+                    onChange={(event) => setOverrides((current) => ({ ...current, [row.id]: event.target.value }))}
+                    aria-label={`Where does ${row.item.name} live?`}
+                  >
+                    <option value="">Where does this live?</option>
+                    {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-            {!row.item.default_location_id && (
-              <div style={{ paddingBottom: '0.75rem' }}>
-                <select
-                  className="fm-field"
-                  value={overrides[row.id] || ''}
-                  onChange={(event) =>
-                    setOverrides((current) => ({ ...current, [row.id]: event.target.value }))
-                  }
-                  aria-label={`Where does ${row.item.name} live?`}
-                >
-                  <option value="">Where does this live?</option>
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </section>
 
       {error && (
@@ -251,7 +277,7 @@ export default function SyncScreen() {
         onClick={handleConfirm}
         disabled={!canConfirm || submitting}
       >
-        {submitting ? 'Moving' : `Move ${rows.length} item${rows.length === 1 ? '' : 's'} in`}
+        {submitting ? 'Moving' : confirmLabel(included.length, leftOut)}
       </button>
       {!canConfirm && (
         <p className="fm-note" style={{ marginTop: '0.5rem', textAlign: 'center' }}>
@@ -260,4 +286,21 @@ export default function SyncScreen() {
       )}
     </div>
   )
+}
+
+// The main button's words: what will go in, and what just comes off.
+function confirmLabel(moving, leftOut) {
+  const plural = (n) => `${n} item${n === 1 ? '' : 's'}`
+  if (moving === 0) return `Clear ${plural(leftOut)} off the list`
+  return `Move ${plural(moving)} in`
+}
+
+// "3 items went into the inventory. 1 came off the list only."
+function resultSummary(result) {
+  const moved = result.moved.length
+  const skipped = result.skipped.length
+  const parts = []
+  if (moved > 0) parts.push(`${moved} item${moved === 1 ? '' : 's'} went into the inventory.`)
+  if (skipped > 0) parts.push(`${skipped} came off the list only.`)
+  return parts.join(' ')
 }
