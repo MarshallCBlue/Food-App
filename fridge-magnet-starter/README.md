@@ -197,7 +197,7 @@ uses the foods, aisles and storage places the app already knows, and asks
 when something is unclear rather than guessing.
 
 How it works: `supabase/functions/fridge-magnet-mcp` is a small server
-that gives Claude a menu of actions (20 of them). Claude picks from the
+that gives Claude a menu of actions (21 of them, including saving recipes from a web link, a photo or pasted text). Claude picks from the
 menu; the server does the work through the `assistant_*` database
 functions in `supabase/migrations/20261008150000_claude_connector.sql`.
 
